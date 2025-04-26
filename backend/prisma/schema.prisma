@@ -1,0 +1,392 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model activity_logs {
+  id            Int       @id @default(autoincrement())
+  user_id       Int
+  activity_type String    @db.VarChar(50)
+  details       String?
+  ip_address    String?   @db.Inet
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([activity_type], map: "idx_activity_logs_activity_type")
+  @@index([created_at], map: "idx_activity_logs_created_at")
+  @@index([user_id], map: "idx_activity_logs_user_id")
+}
+
+model announcements {
+  id           Int       @id @default(autoincrement())
+  course_id    Int
+  publisher_id Int
+  title        String    @db.VarChar(255)
+  content      String
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+  courses      courses   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users     @relation(fields: [publisher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([course_id], map: "idx_announcements_course_id")
+  @@index([publisher_id], map: "idx_announcements_publisher_id")
+}
+
+model categories {
+  id      Int       @id @default(autoincrement())
+  name    String    @db.VarChar(50)
+  slug    String    @unique @db.VarChar(255)
+  courses courses[]
+
+  @@index([slug], map: "idx_categories_slug")
+}
+
+model certificates {
+  id               Int         @id @default(autoincrement())
+  enrollment_id    Int
+  certificate_url  String      @db.VarChar(512)
+  certificate_code String      @unique @db.VarChar(255)
+  issued_at        DateTime?   @default(now()) @db.Timestamptz(6)
+  created_at       DateTime?   @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?   @default(now()) @db.Timestamptz(6)
+  enrollments      enrollments @relation(fields: [enrollment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([certificate_code], map: "idx_certificates_code")
+  @@index([enrollment_id], map: "idx_certificates_enrollment_id")
+}
+
+model courses {
+  id                  Int               @id @default(autoincrement())
+  title               String            @db.VarChar(255)
+  description         String
+  what_you_will_learn Json
+  course_requirements Json
+  instructor_id       Int               
+  category_id         Int            
+  thumbnail_url       String            @db.VarChar(512)
+  slug                String            @unique @db.VarChar(150)
+  intro_video_url     String            @db.VarChar(512)
+  difficulty          course_difficulty
+  is_published        Boolean?          @default(true)
+  total_duration      Int
+  created_at          DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?         @default(now()) @db.Timestamptz(6)
+  subtitle            String?
+  announcements       announcements[]
+  categories          categories?       @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  instructors         instructors       @relation(fields: [instructor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_instructor")
+  enrollments         enrollments[]
+  modules             modules[]
+  wishlists           wishlists[]
+
+  @@index([category_id], map: "idx_courses_category_id")
+  @@index([difficulty], map: "idx_courses_difficulty")
+  @@index([instructor_id], map: "idx_courses_instructor_id")
+  @@index([is_published], map: "idx_courses_is_published")
+  @@index([slug], map: "idx_courses_slug")
+  @@index([subtitle], map: "idx_courses_subtitle")
+}
+
+model enrollments {
+  id                      Int            @id @default(autoincrement())
+  user_id                 Int
+  course_id               Int
+  enrolled_at             DateTime?      @default(now()) @db.Timestamptz(6)
+  progress_percent        Int?           @default(0)
+  last_accessed_module_id Int?
+  last_accessed_lesson_id Int?
+  completed_at            DateTime?      @db.Timestamptz(6)
+  certificates            certificates[]
+  courses                 courses        @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lessons                 lessons?       @relation(fields: [last_accessed_lesson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  modules                 modules?       @relation(fields: [last_accessed_module_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                   users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, course_id])
+  @@index([course_id], map: "idx_enrollments_course_id")
+  @@index([last_accessed_lesson_id], map: "idx_enrollments_last_lesson")
+  @@index([last_accessed_module_id], map: "idx_enrollments_last_module")
+  @@index([user_id], map: "idx_enrollments_user_id")
+}
+
+model instructors {
+  id             Int       @id @default(autoincrement())
+  user_id        Int      @unique
+  description    String?
+  specialization String?   @db.VarChar(255)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
+  courses        courses[]
+  users          users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_instructors_created_at")
+  @@index([specialization], map: "idx_instructors_specialization")
+  @@index([user_id], map: "idx_instructors_user_id")
+}
+
+model lesson_progress {
+  user_id      Int
+  lesson_id    Int
+  status       String    @default("not_started") @db.VarChar(20)
+  completed_at DateTime? @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+  lessons      lessons   @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, lesson_id])
+  @@index([status], map: "idx_lesson_progress_status")
+}
+
+model lessons {
+  id              Int                 @id @default(autoincrement())
+  title           String              @db.VarChar(255)
+  module_id       Int
+  content_type    lesson_content_type
+  video_url       String?             @db.VarChar(512)
+  lesson_text     String?
+  duration        Int?
+  order_position  Int
+  created_at      DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?           @default(now()) @db.Timestamptz(6)
+  quiz_id         Int?
+  enrollments     enrollments[]
+  lesson_progress lesson_progress[]
+  modules         modules             @relation(fields: [module_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  quizzes         quizzes?            @relation(fields: [quiz_id], references: [id], onUpdate: NoAction)
+  notes           notes[]
+
+  @@unique([module_id, order_position], map: "unique_lesson_order_per_module")
+  @@index([content_type], map: "idx_lessons_content_type")
+  @@index([module_id], map: "idx_lessons_module_id")
+  @@index([module_id, order_position], map: "idx_lessons_order")
+}
+
+model modules {
+  id             Int           @id @default(autoincrement())
+  title          String        @db.VarChar(255)
+  course_id      Int
+  order_position Int
+  duration       Int
+  created_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  enrollments    enrollments[]
+  lessons        lessons[]
+  courses        courses       @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([course_id, order_position], map: "unique_module_order_per_course")
+  @@index([course_id], map: "idx_modules_course_id")
+  @@index([course_id, order_position], map: "idx_modules_order")
+}
+
+model notes {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  lesson_id  Int
+  content    String
+  noted_at   Int
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  lessons    lessons   @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([lesson_id], map: "idx_notes_lesson_id")
+  @@index([user_id], map: "idx_notes_user_id")
+  @@index([user_id, lesson_id], map: "idx_notes_user_lesson")
+}
+
+model notifications {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  title      String    @db.VarChar(255)
+  type       String    @db.VarChar(255)
+  content    String?
+  metadata   Json?
+  is_read    Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  read_at    DateTime? @db.Timestamptz(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_notifications_created_at")
+  @@index([user_id, is_read], map: "idx_notifications_is_read")
+  @@index([user_id], map: "idx_notifications_user_id")
+}
+
+model options {
+  id           Int            @id @default(autoincrement())
+  question_id  Int
+  text         String         @db.VarChar(255)
+  is_correct   Boolean
+  created_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  questions    questions      @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_answers user_answers[]
+
+  @@index([question_id, is_correct], map: "idx_options_is_correct")
+  @@index([question_id], map: "idx_options_question_id")
+}
+
+model permissions {
+  id               Int                @id @default(autoincrement())
+  name             String             @unique @db.VarChar(100)
+  description      String?
+  role_permissions role_permissions[]
+
+  @@index([name], map: "idx_permissions_name")
+}
+
+model questions {
+  id           Int            @id @default(autoincrement())
+  quiz_id      Int
+  text         String
+  created_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  options      options[]
+  quizzes      quizzes        @relation(fields: [quiz_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_answers user_answers[]
+
+  @@index([quiz_id], map: "idx_questions_quiz_id")
+}
+
+model quiz_attempts {
+  id           Int            @id @default(autoincrement())
+  user_id      Int
+  quiz_id      Int
+  started_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  completed_at DateTime?      @db.Timestamptz(6)
+  score        Int?
+  passed       Boolean?       @default(false)
+  updated_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  quizzes      quizzes        @relation(fields: [quiz_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_answers user_answers[]
+
+  @@index([passed], map: "idx_quiz_attempts_passed")
+  @@index([quiz_id], map: "idx_quiz_attempts_quiz_id")
+  @@index([user_id], map: "idx_quiz_attempts_user_id")
+  @@index([user_id, quiz_id], map: "idx_quiz_attempts_user_quiz")
+}
+
+model quizzes {
+  id            Int             @id @default(autoincrement())
+  title         String          @db.VarChar(255)
+  duration_time Int
+  created_by    Int
+  created_at    DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?       @default(now()) @db.Timestamptz(6)
+  lessons       lessons[]
+  questions     questions[]
+  quiz_attempts quiz_attempts[]
+  users         users           @relation("quizzes_created_by", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model role_permissions {
+  role_id       Int
+  permission_id Int
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([role_id, permission_id])
+}
+
+model roles {
+  id               Int                @id @default(autoincrement())
+  name             String             @unique @db.VarChar(50)
+  description      String?
+  role_permissions role_permissions[]
+  users            users[]
+
+  @@index([name], map: "idx_roles_name")
+}
+
+model user_answers {
+  attempt_id    Int
+  question_id   Int
+  option_id     Int
+  answered_at   DateTime?     @default(now()) @db.Timestamptz(6)
+  quiz_attempts quiz_attempts @relation(fields: [attempt_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  options       options?      @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  questions     questions     @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([attempt_id, question_id])
+  @@index([option_id], map: "idx_user_answers_option_id")
+}
+
+model users {
+  id                 Int               @id @default(autoincrement())
+  full_name          String            @db.VarChar(255)
+  username           String            @unique @db.VarChar(255)
+  email              String            @unique @db.VarChar(255)
+  password_hash      String            @db.VarChar(255)
+  role_id            Int
+  email_verified     Boolean           @default(false)
+  verification_token String?           @db.VarChar(255)
+  reset_token        String?           @db.VarChar(255)
+  reset_token_expiry DateTime?         @db.Timestamptz(6)
+  status             user_status       @default(inactive)
+  last_login         DateTime?         @db.Timestamptz(6)
+  created_at         DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?         @default(now()) @db.Timestamptz(6)
+  activity_logs      activity_logs[]
+  announcements      announcements[]
+  enrollments        enrollments[]
+  instructors        instructors?
+  lesson_progress    lesson_progress[]
+  notes              notes[]
+  notifications      notifications[]
+  quiz_attempts      quiz_attempts[]
+  roles              roles             @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  wishlists          wishlists[]
+  quizzes            quizzes[]         @relation("quizzes_created_by") // Added this line
+
+  @@index([email], map: "idx_users_email")
+  @@index([role_id], map: "idx_users_role_id")
+  @@index([status], map: "idx_users_status")
+  @@index([username], map: "idx_users_username")
+}
+
+model wishlists {
+  user_id    Int
+  course_id  Int
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  courses    courses   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, course_id])
+  @@index([course_id], map: "idx_wishlists_course_id")
+  @@index([user_id], map: "idx_wishlists_user_id")
+}
+
+model token_blacklist {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  created_at DateTime @default(now())
+  expires_at DateTime
+
+  @@index([token])
+  @@index([expires_at])
+}
+
+enum course_difficulty {
+  beginner
+  intermediate
+  advanced
+  allLevel
+}
+
+enum lesson_content_type {
+  video
+  quiz
+  text
+}
+
+enum user_status {
+  active
+  inactive
+  suspended
+}

@@ -1,0 +1,10 @@
+import { listCoursesController } from './list.controller';
+import { getCourseBySlugController } from './getBySlug.controller';
+import { removeCourseBySlugController } from './remove.controller';
+import { createCourseController } from './create.controller';
+import { updateCourseController } from './update.controller';
+import {getCourseBySlugACController} from './getBySlugAC.controller';
+
+export { listCoursesController,getCourseBySlugController,removeCourseBySlugController,createCourseController,updateCourseController,getCourseBySlugACController };
+
+
