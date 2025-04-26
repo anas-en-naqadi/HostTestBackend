@@ -6,7 +6,7 @@ const getNotesCacheKey = (userId: number) => `notes:${userId}`;
 
 export const createNote = async (
   userId: number,
-  data: { lessonId: number; content: string }
+  data: { lessonId: number; content: string; noted_at:number }
 ): Promise<notes> => {
   const lesson = await prisma.lessons.findUnique({
     where: { id: data.lessonId },
@@ -21,6 +21,7 @@ export const createNote = async (
       user_id: userId,
       lesson_id: data.lessonId,
       content: data.content,
+      noted_at:data.noted_at,
     },
   });
 
