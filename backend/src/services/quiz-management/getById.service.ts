@@ -1,8 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import Redis from 'ioredis';
+import redis from "../../config/redis";
 
 const prisma = new PrismaClient();
-const redis = new Redis();
 
 export const getQuizById = async (userId: number, quizId: number) => {
   const cacheKey = `quiz:${quizId}`;

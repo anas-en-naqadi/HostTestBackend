@@ -1,8 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import Redis from 'ioredis';
+import redis from "../../config/redis";
 
 const prisma = new PrismaClient();
-const redis = new Redis();
 
 export const deleteQuiz = async (userId: number, quizId: number) => {
   const user = await prisma.users.findUnique({ where: { id: userId } });
