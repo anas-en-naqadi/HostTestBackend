@@ -1,6 +1,7 @@
-// src/config/redis.ts
 import Redis from 'ioredis';
 
+// Log the connection attempt
+console.log("Connecting to Redis at: switchyard.proxy.rlwy.net:20226");
 
 const redis = new Redis({
   host: "switchyard.proxy.rlwy.net",
@@ -14,6 +15,12 @@ const redis = new Redis({
   }
 });
 
+redis.on('error', (err) => {
+  console.error('Redis connection error:', err);
+});
 
+redis.on('connect', () => {
+  console.log('Successfully connected to Redis at switchyard.proxy.rlwy.net:20226');
+});
 
 export default redis;
