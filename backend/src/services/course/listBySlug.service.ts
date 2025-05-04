@@ -8,8 +8,8 @@ import {
   setInCache,
 } from "../../utils/cache.utils";
 
-export const getCourseBySlug = async (slug: string): Promise<any> => {
-  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${slug}`);
+export const getCourseBySlug = async (slug: string,userId:number): Promise<any> => {
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}`);
 
   // Check cache
   const cached = await getFromCache<CourseResponse>(cacheKey);
@@ -38,6 +38,14 @@ export const getCourseBySlug = async (slug: string): Promise<any> => {
             name: true,
           },
         },
+        wishlists:{
+          where:{
+            user_id:userId
+          },
+          select: {
+            user_id: true,
+          },
+        },
         announcements: {
           select: {
             id: true,
@@ -64,6 +72,10 @@ export const getCourseBySlug = async (slug: string): Promise<any> => {
             enrollments: true, // 🧮 Count of enrollments
           },
         },
+        enrollments: {
+          where: { user_id: userId },
+        select: { user_id: true,last_accessed_lesson_id:true,last_accessed_module_id:true,progress_percent:true },
+        },
         modules: {
           select: {
             id: true,
@@ -79,6 +91,16 @@ export const getCourseBySlug = async (slug: string): Promise<any> => {
                 lesson_text: true,
                 duration: true,
                 order_position: true,
+                lesson_progress:{
+                  where:{
+                    user_id:userId
+                  },
+                  select:{
+                    user_id:true,
+                    status:true,
+                    completed_at:true
+                  }
+                },
                 notes: {
                   select: {
                     id: true,
@@ -90,6 +112,17 @@ export const getCourseBySlug = async (slug: string): Promise<any> => {
                   select: {
                     id: true,
                     title: true,
+                    quiz_attempts:{
+                      where:{
+                        user_id:userId
+                      },
+                      select:{
+                        passed:true,
+                        score:true,
+                        completed_at:true,
+                        started_at:true,
+                      }
+                    },
                     questions: {
                       select: {
                         id: true,
@@ -117,13 +150,21 @@ export const getCourseBySlug = async (slug: string): Promise<any> => {
         },
       },
     });
-
+    const notes = await prisma.notes.findMany({
+      where:{
+        user_id:userId,
+      }
+    });
     if (!course) {
-        throw new AppError(404, 'Course Not Found');
+      throw new AppError(404, "Course not found");
+    }
+  
+    if (Object.keys(course.enrollments).length === 0) {
+      throw new AppError(403, "You must be enrolled to view this course");
     }
 
-    await setInCache(cacheKey, course);
+    await setInCache(cacheKey, {course,notes});
 
-    return course;
+    return {course,notes};
 
 };

@@ -17,7 +17,9 @@ export const removeWishlistController = async (
 
     const userId = user.id;
     const courseId = parseInt(req.params.courseId, 10);
+    const mainCourseId = parseInt(req.body?.main_course_id, 10) || null;
 
+console.log("test",req.body,req.params)
     if (isNaN(courseId)) {
       res.status(400).json({ 
         success: false,
@@ -27,7 +29,7 @@ export const removeWishlistController = async (
       return;
     }
 
-    await deleteWishlist(userId, courseId);
+    await deleteWishlist(userId, courseId,mainCourseId);
     res.status(200).json({ 
       success: true,
       message: 'Course removed from wishlist successfully',

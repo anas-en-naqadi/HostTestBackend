@@ -1,16 +1,15 @@
 import { PrismaClient, notes } from '@prisma/client';
-import redis from '../../config/redis';
+import { CACHE_KEYS, deleteFromCache, generateCacheKey } from '../../utils/cache.utils';
 
 const prisma = new PrismaClient();
-const getNotesCacheKey = (userId: number) => `notes:${userId}`;
 
 export const createNote = async (
   userId: number,
-  data: { lessonId: number; content: string; noted_at:number }
+  data: { lessonId: number; content: string,noted_at:number }
 ): Promise<notes> => {
   const lesson = await prisma.lessons.findUnique({
     where: { id: data.lessonId },
-    include: { modules: { include: { courses: { include: { enrollments: true } } } } },
+    include: { modules: { include: { courses: {select:{slug:true,enrollments:true}} } } },
   });
   if (!lesson || !lesson.modules.courses.enrollments.some(e => e.user_id === userId)) {
     throw new Error('Lesson not found or user not enrolled in the course');
@@ -21,10 +20,10 @@ export const createNote = async (
       user_id: userId,
       lesson_id: data.lessonId,
       content: data.content,
-      noted_at:data.noted_at,
+      noted_at:data.noted_at
     },
   });
-
-  await redis.del(getNotesCacheKey(userId));
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${lesson.modules.courses.slug}`);
+await deleteFromCache(cacheKey);
   return note;
 };

@@ -64,7 +64,7 @@ export const updateUserProfile = async (id: number, data: {
     // Check if current password is correct
     const isPasswordValid = await bcrypt.compare(data.current_password, user.password_hash);
     if (!isPasswordValid) {
-      throw new AppError(401, 'Current password is incorrect');
+      throw new AppError(400, 'Current password is incorrect');
     }
     
     // Verify password confirmation

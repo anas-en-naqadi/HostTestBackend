@@ -1,20 +1,67 @@
+// src/services/wishlists/list.service.ts
 import { PrismaClient, wishlists } from '@prisma/client';
 import redis from '../../config/redis';
 
 const prisma = new PrismaClient();
-const getWishlistsCacheKey = (userId: number) => `wishlists:${userId}`;
+const getWishlistsCacheKey = (userId: number, page: number, limit: number) => 
+  `wishlists:${userId}:page${page}:limit${limit}`;
 
-export const getWishlists = async (userId: number): Promise<wishlists[]> => {
-  const cacheKey = getWishlistsCacheKey(userId);
+interface PaginatedWishlists {
+  wishlists: wishlists[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+export const getWishlists = async (
+  userId: number, 
+  page: number = 1, 
+  limit: number = 6
+): Promise<PaginatedWishlists> => {
+  const cacheKey = getWishlistsCacheKey(userId, page, limit);
   const cachedData = await redis.get(cacheKey);
 
   if (cachedData) return JSON.parse(cachedData);
 
-  const wishlists = await prisma.wishlists.findMany({
-    where: { user_id: userId },
-    include: { courses: true }, // Optional: include course details
+  // Calculate pagination parameters
+  const skip = (page - 1) * limit;
+
+  // Get total count for pagination info
+  const totalCount = await prisma.wishlists.count({
+    where: { user_id: userId }
   });
 
-  await redis.set(cacheKey, JSON.stringify(wishlists), 'EX', 3600);
-  return wishlists;
+  // Get paginated data
+  const wishlists = await prisma.wishlists.findMany({
+    where: { user_id: userId },
+    include: { 
+      courses: {
+        include: {
+          instructors: {
+            select: {
+              users: {
+                select: {
+                  full_name: true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    skip: skip,
+    take: limit
+  });
+
+  const totalPages = Math.ceil(totalCount / limit);
+  
+  const result = {
+    wishlists,
+    totalCount,
+    totalPages,
+    currentPage: page
+  };
+
+  await redis.set(cacheKey, JSON.stringify(result), 'EX', 3600);
+  return result;
 };

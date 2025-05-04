@@ -1,9 +1,7 @@
 // src/services/quiz-management/create.service.ts
 import { PrismaClient } from '@prisma/client';
 import redis from "../../config/redis";
-
 const prisma = new PrismaClient();
-
 
 interface OptionInput {
   text: string;

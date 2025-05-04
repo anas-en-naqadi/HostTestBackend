@@ -1,51 +1,50 @@
 // src/routes/category.routes.ts
 
-import { Router } from 'express';
+import { Router } from "express";
 import {
   createCategoryController,
   getCategoryBySlugController,
   listCategoriesController,
   removeCategoryController,
   updateCategoryController,
-} from '../controllers/category';
+} from "../controllers/category";
 import {
   createCategorySchema,
   updateCategorySchema,
   getCategorySchema,
-} from '../validation/category.validation';
-import { authenticate,hasRole } from '../middleware/auth.middleware';
-import { validate, validateSlug } from '../middleware/validator.middleware';
-import { UserRole } from '../types/auth.types';
- 
+} from "../validation/category.validation";
+import { authenticate, hasRole } from "../middleware/auth.middleware";
+import { validate, validateSlug } from "../middleware/validator.middleware";
+import { UserRole } from "../types/auth.types";
 
 const router = Router();
-router.use(authenticate,hasRole(UserRole.ADMIN));
+router.use(authenticate, hasRole(UserRole.INSTRUCTOR));
 router.post(
-  '/',
-  validate(createCategorySchema, 'body'),
+  "/",
+  validate(createCategorySchema, "body"),
   createCategoryController
 );
 
-router.get('/', listCategoriesController);
+router.get("/", listCategoriesController);
 
 router.get(
-  '/:slug',
+  "/:slug",
   validateSlug,
-  validate(getCategorySchema, 'params'),
+  validate(getCategorySchema, "params"),
   getCategoryBySlugController
 );
 
 router.put(
-  '/:slug',
+  "/:slug",
   validateSlug,
-  validate(updateCategorySchema, 'body'),
+  validate(updateCategorySchema, "body"),
   updateCategoryController
 );
 
 router.delete(
-  '/:slug',
+  "/:slug",
   validateSlug,
-  validate(getCategorySchema, 'params'),
+  validate(getCategorySchema, "params"),
   removeCategoryController
 );
 

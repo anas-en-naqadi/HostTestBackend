@@ -57,6 +57,9 @@ export const getCourseBySlugAC = async ({slug,userId}:{slug:string,userId:number
             },
           },
           courses: {
+            orderBy:{
+              created_at:"desc"
+            },
             select: {
               id: true,
               title: true,
@@ -90,6 +93,14 @@ export const getCourseBySlugAC = async ({slug,userId}:{slug:string,userId:number
           enrollments: true,
         },
       },
+      enrollments:{
+        where:{
+          user_id:userId
+        },
+        select:{
+          user_id:true
+        }
+      },
   
       modules: {
         orderBy: { order_position: 'asc' },
@@ -112,7 +123,8 @@ export const getCourseBySlugAC = async ({slug,userId}:{slug:string,userId:number
       },
     },
   });
-  
+
+ 
 
     if (!course) {
         throw new AppError(404, 'Course Not Found');

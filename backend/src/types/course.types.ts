@@ -52,6 +52,17 @@ export interface CourseResponse {
   thumbnail_url: string;
   created_at: Date;
   is_published?: boolean;
+  isInWishList: boolean; // Added
+}
+export interface DashboradCourseDTO {
+  id: number;
+  title: string;
+  thumbnail: string;
+  difficulty: string;
+  duration: number;
+  slug: string;
+  instructorName: string;
+  isInWishList: boolean;
 }
 
 export interface Lesson {

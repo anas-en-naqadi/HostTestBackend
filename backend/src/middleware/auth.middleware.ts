@@ -98,6 +98,7 @@ export const hasRole = (roleName: UserRole | UserRole[]) => (
 ) => {
   if (!req.user) return next(new AppError(401, 'Authentication required'));
   const allowedRoles = Array.isArray(roleName) ? roleName : [roleName];
+  console.log("user",req.user.role as UserRole);
   if (!allowedRoles.includes(req.user.role as UserRole)) {
     return next(new AppError(403, 'Forbidden: insufficient role'));
   }

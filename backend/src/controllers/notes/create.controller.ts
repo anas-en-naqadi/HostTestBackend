@@ -16,7 +16,8 @@ export const createNoteController = async (
     }
 
     const userId = user.id;
-    const { lessonId, content,noted_at } = req.body;
+    const { content,noted_at } = req.body;
+    const lessonId = req.body.lesson_id;
 
     if (!lessonId || isNaN(lessonId)) {
       res.status(400).json({ 
@@ -38,7 +39,7 @@ export const createNoteController = async (
 
     const note = await createNote(userId, { 
       lessonId: Number(lessonId), 
-      content ,
+      content,
       noted_at
     });
 

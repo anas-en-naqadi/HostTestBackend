@@ -11,10 +11,14 @@ export const createCourseController = async (req: Request, res: Response) => {
   try {
     // Validate the incoming request body using Zod schema
     const parsedBody = createCourseSchema.parse(req.body);
+    const userId = req.user?.id;
+    if(!userId){
+      throw new AppError(401,"User Unauthenticated");
+    }
 
     // Create the course using the validated data
     const newCourse = await createCourse(parsedBody as CreateCourseDto);
-    const course = await getCourseBySlug(newCourse.slug);
+    const course = await getCourseBySlug(newCourse.slug,userId);
     // Respond with the created course
     successResponse(res, course);
   } catch (err) {

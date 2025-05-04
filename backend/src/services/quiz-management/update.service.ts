@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import redis from "../../config/redis";
-const prisma = new PrismaClient();
 
+const prisma = new PrismaClient();
 
 interface OptionInputWithId {
   id: number; // Required, as we only update existing options

@@ -16,8 +16,8 @@ export const postLessonProgressController = async (
     }
 
     const userId = user.id;
-    const { lessonId, status } = req.body;
-
+    const { lesson_id,slug,completed_at } = req.body;
+    const lessonId = lesson_id;
     if (!lessonId || isNaN(lessonId)) {
       res.status(400).json({ 
         success: false, 
@@ -26,14 +26,23 @@ export const postLessonProgressController = async (
       });
       return;
     }
+    if (!slug) {
+      res.status(400).json({ 
+        success: false, 
+        message: 'slug is required',
+        data: null
+      });
+      return;
+    }
 
-    const progress = await createLessonProgress(userId, Number(lessonId), status);
+    const progress = await createLessonProgress(userId, Number(lessonId),slug,completed_at);
     res.status(201).json({ 
       success: true, 
       message: 'Lesson progress created successfully', 
       data: progress 
     });
   } catch (error) {
+    console.log(error)
     if (error instanceof AppError) {
       res.status(error.statusCode).json({ success: false, message: error.message });
     } else {

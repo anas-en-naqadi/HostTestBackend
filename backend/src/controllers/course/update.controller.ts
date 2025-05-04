@@ -12,9 +12,13 @@ export const updateCourseController = async (req: Request, res: Response) => {
     const slug = req.params.slug;
 
     const parsedBody = updateCourseSchema.parse(req.body);
+    const userId = req.user?.id;
+       if(!userId){
+          throw new AppError(401,"User Unauthenticated");
+        }
     const updatedCourse = await updateCourse(slug, parsedBody as Partial<CreateCourseDto>);
 
-    const course = await getCourseBySlug(updatedCourse.slug);
+    const course = await getCourseBySlug(updatedCourse.slug,userId);
     successResponse(res, course);
   } catch (err) {
     console.error(err);

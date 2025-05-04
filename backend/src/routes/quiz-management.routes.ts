@@ -10,16 +10,15 @@ import { getQuizByIdController } from '../controllers/quiz-management/getById.co
 
 const router = Router();
 
-// List and get quizzes: Any authenticated user
-router.get('/quizzes', authenticate, listQuizzesController);
-router.get('/quizzes/:id', authenticate, getQuizByIdController);
+router.use(authenticate,hasRole(UserRole.INSTRUCTOR));
 
-// Create, update, delete quizzes: Admins and instructors only
-router.post('/quizzes', authenticate, hasRole([UserRole.ADMIN, UserRole.INSTRUCTOR]), createQuizController);
-router.put('/quizzes/:id', authenticate, hasRole([UserRole.ADMIN, UserRole.INSTRUCTOR]), updateQuizController);
-router.delete('/quizzes/:id', authenticate, hasRole([UserRole.ADMIN, UserRole.INSTRUCTOR]), deleteQuizController);
-router.delete('/questions/:questionId', authenticate, hasRole([UserRole.ADMIN, UserRole.INSTRUCTOR]), deleteQuestionController);
-router.delete('/options/:optionId', authenticate, hasRole([UserRole.ADMIN, UserRole.INSTRUCTOR]), deleteOptionController);
+router.get('/quizzes', listQuizzesController);
+router.get('/:id', getQuizByIdController);
+router.post('/', createQuizController);
+router.put('/:id', updateQuizController);
+router.delete('/:id', deleteQuizController);
+router.delete('/questions/:questionId', deleteQuestionController);
+router.delete('/options/:optionId', deleteOptionController);
 
 
 export default router;

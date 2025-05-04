@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { getCourseBySlugAC } from "../../services/course";
 import { errorResponse, successResponse } from "../../utils/api.utils";
 import { AppError } from "../../middleware/error.middleware";
-import { wishlists } from '@prisma/client';
 import { Module } from "types/course.types";
 
 export const getCourseBySlugACController = async (req: Request, res: Response) => {
@@ -13,11 +12,9 @@ export const getCourseBySlugACController = async (req: Request, res: Response) =
     const userId = req.user!.id; // Make sure your auth middleware adds user to req
 
     const course = await getCourseBySlugAC({slug, userId});
-
-    if (!course) {
-      throw new AppError(404, "Course not found");
-    }
-
+    const instructorCourses = course.instructors.courses.filter(
+      (instructorCourse: any) => instructorCourse.id !== course.id
+    );
     // ✅ Optional: Adjust response structure if needed
     const formattedCourse = {
       id: course.id,
@@ -31,13 +28,14 @@ export const getCourseBySlugACController = async (req: Request, res: Response) =
       createdAt: course.created_at,
       whatYouWillLearn: course.what_you_will_learn,
       requirements: course.course_requirements,
+      isEnrolled:Object.keys(course.enrollments).length ===1,
       categories: course.categories,
       isInWishList:Object.keys(course.wishlists).length > 0,
       instructor: {
         fullName: course.instructors.users.full_name,
         specialization: course.instructors.specialization,
         description: course.instructors.description,
-        otherCourses: course.instructors.courses.map((c:any) => ({
+        otherCourses: instructorCourses.map((c:any) => ({
           id: c.id,
           title: c.title,
           thumbnail: c.thumbnail_url,

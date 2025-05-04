@@ -17,6 +17,7 @@ import { initVerificationCron } from './jobs/verificationCron';
 
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 import categoryRoutes from './routes/category.routes';
 import instructorRoutes from './routes/instructor.routes';
 import roleRoutes from './routes/role.routes';
@@ -42,7 +43,9 @@ const app = express();
 app.use(helmet());
 app.use(cors({
   origin: process.env.FRONTEND_URL ,
-  credentials: true
+  credentials: true,
+  methods: ['GET','POST','PUT','DELETE'],
+  allowedHeaders: ['Content-Type','Authorization']
 }));
 app.use(cookieParser()); 
 app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'common'));
@@ -106,17 +109,21 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/enrollments',     enrollmentRoutes);
+app.use('/api/lesson-progress', lessonProgressRoutes);
+app.use('/api/quizzes',         quizManagementRoutes);
+app.use('/api/quiz-attempts',   quizAttemptRoutes);
+app.use('/api/answers',         userAnswerRoutes);
+app.use('/api/notes',           notesRoutes);
+app.use('/api/announcements',   announcementsRoutes);
+app.use('/api/certificates',    certificatesRoutes);
+app.use('/api/wishlists',       wishlistsRoutes);
 
-// Routes
-app.use('/api', enrollmentRoutes); // New route integration
-app.use('/api', lessonProgressRoutes);
-app.use('/api', quizManagementRoutes);
-app.use('/api', quizAttemptRoutes);
-app.use('/api', userAnswerRoutes);
-app.use('/api', notesRoutes);
-app.use('/api', announcementsRoutes);
-app.use('/api', certificatesRoutes);
-app.use('/api', wishlistsRoutes);
+// not found route handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
 
 // Error handling middleware
 app.use(errorHandler);

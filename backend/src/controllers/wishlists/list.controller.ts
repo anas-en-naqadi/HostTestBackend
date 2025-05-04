@@ -15,12 +15,23 @@ export const listWishlistsController = async (
       throw new AppError(401, 'User not authenticated');
     }
 
+    // Extract pagination parameters from query string
+    const page = req.query.page ? parseInt(req.query.page as string) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
+
     const userId = user.id;
-    const wishlists = await getWishlists(userId);
+    const paginatedWishlists = await getWishlists(userId, page, limit);
+    
     res.status(200).json({ 
       success: true,
       message: 'Wishlist retrieved successfully',
-      data: wishlists
+      data: paginatedWishlists.wishlists,
+      pagination: {
+        totalCount: paginatedWishlists.totalCount,
+        totalPages: paginatedWishlists.totalPages,
+        currentPage: paginatedWishlists.currentPage,
+        limit: limit
+      }
     });
   } catch (error) {
     if (error instanceof AppError) {

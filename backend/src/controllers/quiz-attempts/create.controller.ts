@@ -16,7 +16,8 @@ export const createQuizAttemptController = async (
     }
 
     const userId = user.id;
-    const { quizId } = req.body;
+    const { quiz_id,completed_at,started_at,score,passed,slug } = req.body;
+    const quizId = quiz_id;
 
     if (!quizId || isNaN(quizId)) {
       res.status(400).json({ 
@@ -27,7 +28,7 @@ export const createQuizAttemptController = async (
       return;
     }
 
-    const attempt = await createQuizAttempt(userId, Number(quizId));
+    const attempt = await createQuizAttempt(userId, Number(quizId),completed_at,started_at,score,passed,slug );
     res.status(201).json({ 
       success: true, 
       message: 'Quiz attempt created successfully', 

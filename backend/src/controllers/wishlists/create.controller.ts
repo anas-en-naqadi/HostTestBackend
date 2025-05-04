@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { createWishlist } from '../../services/wishlists/create.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const createWishlistController = async (
   req: Request,
@@ -16,7 +17,9 @@ export const createWishlistController = async (
     }
 
     const userId = user.id;
-    const { courseId } = req.body;
+    const courseId = req.body.course_id;
+    const mainCourseId = req.body?.main_course_id || null;
+    const ipAddress = req.ip;
 
     if (!courseId || isNaN(courseId)) {
       res.status(400).json({ 
@@ -27,7 +30,16 @@ export const createWishlistController = async (
       return;
     }
 
-    const wishlist = await createWishlist(userId, Number(courseId));
+    const wishlist = await createWishlist(userId, Number(courseId),mainCourseId);
+
+     // Log the activity
+     await logActivity(
+      userId,
+      'WISHLIST_ADD',
+      `Added course ${courseId} to wishlist`,
+      ipAddress
+    ).catch(console.error);
+
     res.status(201).json({ 
       success: true,
       message: 'Course added to wishlist successfully',

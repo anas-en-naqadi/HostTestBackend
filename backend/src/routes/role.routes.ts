@@ -16,4 +16,5 @@ router.get('/:id',getRoleByIdController); // Get role by ID
 router.get('/',hasPermission("role:fetch"), getRolesListController); // Get all roles
 router.post('/assign-permissions',validate(assignPermissionValidation,'body'),assignPermissionController);
 router.post('/revoke-permissions',validate(revokePermissionValidation,'body'),revokePermissionController);
+
 export default router;

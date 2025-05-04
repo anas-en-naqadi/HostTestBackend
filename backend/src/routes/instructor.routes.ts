@@ -11,7 +11,7 @@ router.use(authenticate,hasRole(UserRole.ADMIN));
 
 router.get('/', listInstructorsController);
 router.get('/:id', getInstructorByIdController);
-router.put('/:id',hasRole(UserRole.INSTRUCTOR), validate(updateInstructorSchema, 'body'), updateInstructorController);
+router.put('/:id', validate(updateInstructorSchema, 'body'), updateInstructorController);
 
 
 export default router;
