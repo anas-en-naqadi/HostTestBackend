@@ -111,7 +111,7 @@ describe('Courses Service', () => {
 
     prisma.courses.findUnique.mockResolvedValue(course);
 
-    const result = await getCourseBySlug(slug);
+    const result = await getCourseBySlug(slug,9);
     expect(result).toEqual(course);
   });
 
