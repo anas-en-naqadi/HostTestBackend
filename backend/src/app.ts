@@ -42,7 +42,7 @@ const app = express();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL ,
+  origin: "https://host-test-frontend-kaa6-f4ow6ztj8-anas-ennaqadis-projects.vercel.app" ,
   credentials: true,
   methods: ['GET','POST','PUT','DELETE'],
   allowedHeaders: ['Content-Type','Authorization']
