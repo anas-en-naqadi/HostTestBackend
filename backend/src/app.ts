@@ -42,7 +42,7 @@ app.set('trust proxy', 1);
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: ["https://host-test-frontend-kaa6-mi6m83fp0-anas-ennaqadis-projects.vercel.app","https://forge-api.smartchargecampus.space"] ,
+  origin: ["https://host-test-frontend-kaa6-mi6m83fp0-anas-ennaqadis-projects.vercel.app","https://host-test-frontend-kaa6-git-main-anas-ennaqadis-projects.vercel.app","https://forge-api.smartchargecampus.space"] ,
   credentials: true,
   methods: ['GET','POST','PUT','DELETE'],
   allowedHeaders: ['Content-Type','Authorization']
