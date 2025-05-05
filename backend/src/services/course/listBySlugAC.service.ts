@@ -65,6 +65,7 @@ export const getCourseBySlugAC = async ({slug,userId}:{slug:string,userId:number
               title: true,
               thumbnail_url: true,
               total_duration: true,
+              slug:true,
               difficulty: true,
               instructors: {
                 select: {
