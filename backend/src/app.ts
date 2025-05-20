@@ -41,6 +41,9 @@ import instructorDashboardRoutes from './routes/instructor_dashboard.routes'
 loadEnv();
 const app = express();
 
+// Trust proxy - needed when behind a reverse proxy (Heroku, AWS ELB, Nginx, etc)
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
