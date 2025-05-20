@@ -53,7 +53,7 @@ async function seedPermissions() {
       }
     }
     await Promise.all(rpOps);
-  });
+  },{ maxWait: 60000, timeout: 60000 });
 
   console.log('🎉 Permission seeding completed successfully');
 }
