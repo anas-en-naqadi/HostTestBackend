@@ -3,8 +3,9 @@ import { CreateCourseDto, CreateModuleDto, CreateLessonDto } from "../../types/c
 import { AppError } from "../../middleware/error.middleware";
 import { clearCacheByPrefix, CACHE_KEYS } from "../../utils/cache.utils";
 import { lesson_content_type } from "../../types/course.types";
+import { sendNotification } from "../../utils/notification.utils";
 
-export const createCourse = async (courseData: CreateCourseDto) => {
+export const createCourse = async (courseData: CreateCourseDto,userId:number) => {
   try {
     const { modules, ...courseDetails } = courseData;
 
@@ -28,7 +29,7 @@ export const createCourse = async (courseData: CreateCourseDto) => {
       const newCourse = await tx.courses.create({
         data: {
           ...courseDetails,
-          total_duration: totalDuration,
+          total_duration: totalDuration * 60,
         },
       });
 
@@ -65,9 +66,16 @@ export const createCourse = async (courseData: CreateCourseDto) => {
       return newCourse;
     });
 
+    console.log("created_course",createCourse);
     // Clear cache after successful commit
     await clearCacheByPrefix(CACHE_KEYS.COURSES);
-
+    await sendNotification( {
+      title:   'New Course Available',
+      user_id:createdCourse.instructor_id,
+      type:    'NEW_COURSE',
+      content: `A new course <b>${createdCourse.title}</b> is now open for enrollment!`,
+      metadata: { slug: createdCourse.slug,thumbnail_url:createdCourse.thumbnail_url },
+    },userId,"instructor");
     return createdCourse;
   } catch (error) {
     console.error("Error creating course:", error);

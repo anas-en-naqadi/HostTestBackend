@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { UserResponse } from '../../types/user.types';
 import { AppError } from '../../middleware/error.middleware';
-import { CACHE_KEYS, generateCacheKey, getFromCache, setInCache } from '../../utils/cache.utils';
 
 const prisma = new PrismaClient();
 
@@ -12,12 +11,6 @@ const prisma = new PrismaClient();
  * @throws AppError if user not found
  */
 export const getUserById = async (id: number): Promise<UserResponse> => {
-  // Try to get from cache first
-  const cacheKey = generateCacheKey(CACHE_KEYS.USER, id);
-  const cachedUser = await getFromCache<UserResponse>(cacheKey);
-  if (cachedUser) {
-    return cachedUser;
-  }
 
   // If not in cache, get from database
   const user = await prisma.users.findUnique({
@@ -52,7 +45,7 @@ export const getUserById = async (id: number): Promise<UserResponse> => {
   }
 
   // Determine if the user has the 'instructor' role
-  const isInstructor = user.roles?.name === 'instructor';
+  const isNotIntern = user.roles?.name !== 'intern';
 
   // Transform the response to match UserResponse interface
   const userResponse: UserResponse = {
@@ -65,11 +58,10 @@ export const getUserById = async (id: number): Promise<UserResponse> => {
     last_login: user.last_login,
     created_at: user.created_at,
     updated_at: user.updated_at,
-    ...(isInstructor && { instructor: user.instructors }), // Only include instructors data if role is 'instructor'
+    ...(isNotIntern && { instructor: user.instructors }), // Only include instructors data if role is 'instructor'
   };
 
-  // Store in cache
-  await setInCache(cacheKey, userResponse);
+
 
   return userResponse;
 };

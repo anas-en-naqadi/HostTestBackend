@@ -12,10 +12,18 @@ export class PasswordResetController {
       // Validate email
       AuthValidation.validateForgotPassword(email);
 
-      await PasswordResetService.requestPasswordReset(email);
+     const user = await PasswordResetService.requestPasswordReset(email);
+
+      logActivity(
+        user!.id,
+        'USER_REQUEST_PASSWORD_RESET_LINK',               // your activity code
+        `${user.full_name} with email ${email} requested password reset link`, 
+        req.ip
+      ).catch(console.error);
       
       res.status(200).json({ message: 'Password reset email sent successfully' });
     } catch (error) {
+      console.log("forgot",error);
       if (error instanceof AppError) {
         res.status(error.statusCode).json({ message: error.message });
       } else {
@@ -35,7 +43,7 @@ export class PasswordResetController {
       logActivity(
         user.id,
         'USER_UPDATE_PASSWORD',
-        `${user.full_name} successfully updated password from login page `,
+        `${user.full_name} successfully updated password`,
         req.ip
       ).catch(console.error);
 

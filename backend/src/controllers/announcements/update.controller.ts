@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { updateAnnouncement } from '../../services/announcements/update.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const updateAnnouncementController = async (
   req: Request,
@@ -38,6 +39,14 @@ export const updateAnnouncementController = async (
     }
 
     const announcement = await updateAnnouncement(userId, id, { title, content });
+
+    logActivity(
+      userId,
+      'ANNOUNCEMENT_UPDATED',
+      `${req.user!.full_name} updated announcement ID ${id}`,
+      req.ip
+    ).catch(console.error);
+    
     res.status(200).json({ 
       success: true,
       message: 'Announcement updated successfully',

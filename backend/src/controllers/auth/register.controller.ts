@@ -40,7 +40,7 @@ export class RegisterController {
           intern_name: user.full_name,
           intern_email: user.email,
         }
-      }).catch(console.error);
+      },user.id).catch(console.error);
 
       res.status(201).json({
         message: 'User registered successfully',

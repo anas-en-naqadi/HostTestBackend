@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import { AppError } from '../../middleware/error.middleware';
-import { clearCacheByPrefix, CACHE_KEYS } from '../../utils/cache.utils';
 
 const prisma = new PrismaClient();
 
@@ -17,6 +16,4 @@ export const removeRole = async (id: number): Promise<void> => {
     where: { id },
   });
 
-  // Clear cache by prefix to keep it fresh
-  await clearCacheByPrefix(CACHE_KEYS.ROLES);
 };

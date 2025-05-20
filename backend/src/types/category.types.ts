@@ -18,6 +18,9 @@ export interface CategoryResponse {
   id: number;
   name: string;
   slug: string;
+  createdBy?: number;
+  creatorName?: string;
+  courseCount?: number;
 }
 
 /**

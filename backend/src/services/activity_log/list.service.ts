@@ -1,31 +1,30 @@
 // src/services/activityLog/list.service.ts
 
-import { PrismaClient } from '@prisma/client';
-import { ActivityLogResponse } from '../../types/activity_log.types';
+import { PrismaClient } from "@prisma/client";
 import {
-  CACHE_KEYS,
-  generateCacheKey,
-  getFromCache,
-  setInCache,
-} from '../../utils/cache.utils';
+  ActivityLogResponse,
+  PaginatedResponse,
+} from "../../types/activity_log.types";
 
 const prisma = new PrismaClient();
 
+type SortBy = "created_at" | "activity_type" | "actor_full_name";
+type SortOrder = "asc" | "desc";
+
 /**
- * Fetch all activity logs with caching, including the user who did each action.
+ * Fetch paginated activity logs with caching, including the user who did each action and their role.
  */
-export const listActivityLogs = async (): Promise<ActivityLogResponse[]> => {
-  const cacheKey = generateCacheKey(CACHE_KEYS.ACTIVITY_LOGS, 'list');
+export const listActivityLogs = async (
+  sortBy: SortBy = "created_at",
+  sortOrder: SortOrder = "desc"
+): Promise<ActivityLogResponse[]> => {
+  // Determine the orderBy field for Prisma
+  const orderByField =
+    sortBy === "actor_full_name"
+      ? { users: { full_name: sortOrder } }
+      : { [sortBy]: sortOrder };
 
-  // 1) Try cache
-  const cached = await getFromCache<ActivityLogResponse[]>(cacheKey);
-  if (cached) {
-    console.log('Cache hit: activity logs');
-    return cached;
-  }
-
-  // 2) Cache miss → fetch from DB
-  console.log('Cache miss: querying activity logs');
+  // Fetch all data without pagination
   const raw = await prisma.activity_logs.findMany({
     select: {
       id: true,
@@ -35,18 +34,19 @@ export const listActivityLogs = async (): Promise<ActivityLogResponse[]> => {
       ip_address: true,
       created_at: true,
       updated_at: true,
-      users: {                     // <-- nest the relation here
+      users: {
         select: {
           id: true,
           full_name: true,
+          roles: true,
         },
       },
     },
-    orderBy: { created_at: 'desc' },
+    orderBy: orderByField,
   });
 
-  // 3) Map into ActivityLogResponse
-  const logs: ActivityLogResponse[] = raw.map(l => ({
+  // Map into ActivityLogResponse
+  const logs: ActivityLogResponse[] = raw.map((l) => ({
     id: l.id,
     user_id: l.user_id,
     activity_type: l.activity_type,
@@ -54,9 +54,8 @@ export const listActivityLogs = async (): Promise<ActivityLogResponse[]> => {
     ip_address: l.ip_address ?? undefined,
     created_at: l.created_at!,
     actor_full_name: l.users.full_name,
+    actor_role: l.users?.roles?.name || "",
   }));
 
-  // 4) Cache and return
-  await setInCache(cacheKey, logs);
   return logs;
 };

@@ -37,13 +37,17 @@ export const getWishlists = async (
     include: { 
       courses: {
         include: {
-          instructors: {
+          user: {
             select: {
-              users: {
-                select: {
                   full_name: true
-                }
-              }
+            }
+          },
+          enrollments: {
+            where: {
+              user_id: userId
+            },
+            select: {
+              id: true
             }
           }
         }
@@ -53,10 +57,24 @@ export const getWishlists = async (
     take: limit
   });
 
+   // Transform data to include isEnrolled flag
+   const transformedWishlists = wishlists.map(item => {
+    // Check if user is enrolled in this course
+    const isEnrolled = item.courses.enrollments && item.courses.enrollments.length > 0;
+    
+    return {
+      ...item,
+      courses: {
+        ...item.courses,
+        isEnrolled: isEnrolled
+      }
+    };
+  });
+
   const totalPages = Math.ceil(totalCount / limit);
   
   const result = {
-    wishlists,
+    wishlists: transformedWishlists,
     totalCount,
     totalPages,
     currentPage: page

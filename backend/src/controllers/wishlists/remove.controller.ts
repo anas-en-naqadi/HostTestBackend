@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { deleteWishlist } from '../../services/wishlists/remove.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const removeWishlistController = async (
   req: Request,
@@ -30,6 +31,14 @@ console.log("test",req.body,req.params)
     }
 
     await deleteWishlist(userId, courseId,mainCourseId);
+
+    await logActivity(
+      userId,
+      'WISHLIST_REMOVE',
+      `${user.full_name} removed course ${courseId} from wishlist`,
+      req.ip
+    ).catch(console.error);
+
     res.status(200).json({ 
       success: true,
       message: 'Course removed from wishlist successfully',

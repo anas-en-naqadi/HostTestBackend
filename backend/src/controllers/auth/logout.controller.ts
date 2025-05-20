@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { LogoutService } from '../../services/auth/logout.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export class LogoutController {
   static async logout(req: Request, res: Response): Promise<void> {
@@ -22,10 +23,18 @@ export class LogoutController {
       // Call logout service
       await LogoutService.logout(userId, token);
 
-      // Clear the auth cookie if you're using cookie-based auth
-      res.clearCookie('token');
-      res.clearCookie('refreshToken');
-
+      res.clearCookie('refresh_token', {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
+      logActivity(
+        userId,
+        'USER_LOGOUT',
+        `${req.user?.full_name} logged out`,
+        req.ip
+      ).catch(console.error);
       res.status(200).json({ message: 'Logged out successfully' });
     } catch (error) {
       if (error instanceof AppError) {

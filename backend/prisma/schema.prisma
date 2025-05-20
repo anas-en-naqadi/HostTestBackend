@@ -38,10 +38,12 @@ model announcements {
 }
 
 model categories {
-  id      Int       @id @default(autoincrement())
-  name    String    @db.VarChar(50)
-  slug    String    @unique @db.VarChar(255)
-  courses courses[]
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(50)
+  slug       String    @unique @db.VarChar(255)
+  created_by Int
+  users      users     @relation(fields: [created_by], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "fk_categories_created_by")
+  courses    courses[]
 
   @@index([slug], map: "idx_categories_slug")
 }
@@ -66,8 +68,8 @@ model courses {
   description         String
   what_you_will_learn Json
   course_requirements Json
-  instructor_id       Int               
-  category_id         Int            
+  instructor_id       Int
+  category_id         Int
   thumbnail_url       String            @db.VarChar(512)
   slug                String            @unique @db.VarChar(150)
   intro_video_url     String            @db.VarChar(512)
@@ -78,8 +80,8 @@ model courses {
   updated_at          DateTime?         @default(now()) @db.Timestamptz(6)
   subtitle            String?
   announcements       announcements[]
-  categories          categories?       @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  instructors         instructors       @relation(fields: [instructor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_instructor")
+  categories          categories        @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                users             @relation(fields: [instructor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_instructor")
   enrollments         enrollments[]
   modules             modules[]
   wishlists           wishlists[]
@@ -116,13 +118,12 @@ model enrollments {
 
 model instructors {
   id             Int       @id @default(autoincrement())
-  user_id        Int      @unique
+  user_id        Int       @unique
   description    String?
   specialization String?   @db.VarChar(255)
   created_at     DateTime? @default(now()) @db.Timestamptz(6)
   updated_at     DateTime? @default(now()) @db.Timestamptz(6)
-  courses        courses[]
-  users          users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([created_at], map: "idx_instructors_created_at")
   @@index([specialization], map: "idx_instructors_specialization")
@@ -277,6 +278,7 @@ model quizzes {
   title         String          @db.VarChar(255)
   duration_time Int
   created_by    Int
+  isFinal       Boolean         @default(false)
   created_at    DateTime?       @default(now()) @db.Timestamptz(6)
   updated_at    DateTime?       @default(now()) @db.Timestamptz(6)
   lessons       lessons[]
@@ -310,7 +312,7 @@ model user_answers {
   option_id     Int
   answered_at   DateTime?     @default(now()) @db.Timestamptz(6)
   quiz_attempts quiz_attempts @relation(fields: [attempt_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  options       options?      @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  options       options       @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   questions     questions     @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([attempt_id, question_id])
@@ -326,6 +328,7 @@ model users {
   role_id            Int
   email_verified     Boolean           @default(false)
   verification_token String?           @db.VarChar(255)
+  is_online          Boolean           @default(false)
   reset_token        String?           @db.VarChar(255)
   reset_token_expiry DateTime?         @db.Timestamptz(6)
   status             user_status       @default(inactive)
@@ -334,18 +337,21 @@ model users {
   updated_at         DateTime?         @default(now()) @db.Timestamptz(6)
   activity_logs      activity_logs[]
   announcements      announcements[]
+  categories         categories[]
+  courses            courses[]
   enrollments        enrollments[]
   instructors        instructors?
   lesson_progress    lesson_progress[]
   notes              notes[]
   notifications      notifications[]
   quiz_attempts      quiz_attempts[]
+  quizzes            quizzes[]         @relation("quizzes_created_by")
   roles              roles             @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   wishlists          wishlists[]
-  quizzes            quizzes[]         @relation("quizzes_created_by") // Added this line
 
   @@index([email], map: "idx_users_email")
   @@index([role_id], map: "idx_users_role_id")
+  @@index([is_online], map: "idx_users_is_online")
   @@index([status], map: "idx_users_status")
   @@index([username], map: "idx_users_username")
 }

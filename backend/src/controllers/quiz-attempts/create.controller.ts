@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { createQuizAttempt } from '../../services/quiz-attempts/create.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const createQuizAttemptController = async (
   req: Request,
@@ -29,6 +30,14 @@ export const createQuizAttemptController = async (
     }
 
     const attempt = await createQuizAttempt(userId, Number(quizId),completed_at,started_at,score,passed,slug );
+
+    logActivity(
+      userId,
+      'QUIZ_ATTEMPT_CREATE',
+      `${user.full_name} attempted quiz ID ${quizId} on "${slug}" with score ${score} (${passed ? 'passed' : 'failed'})`,
+      req.ip
+    ).catch(console.error);
+
     res.status(201).json({ 
       success: true, 
       message: 'Quiz attempt created successfully', 

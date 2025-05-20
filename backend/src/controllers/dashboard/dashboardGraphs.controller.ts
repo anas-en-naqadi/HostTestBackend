@@ -17,7 +17,7 @@ export async function getDashboardChartDataController(
   try {
     
     // Get data with Promise.all to handle parallel requests
-    const data = dashboardService.getDashboardChartData(user.id);
+    const data = await dashboardService.getDashboardChartData(user.id);
 
     // Only send the response once we have successfully retrieved all data
     successResponse(

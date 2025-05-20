@@ -12,22 +12,42 @@ export async function getFieldFocusedSuggestions(userId: number) {
   if (cached) return cached as any[];
 
   // Gather the user's category interests
-  const u = await prisma.users.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: {
-      enrollments: { select: { courses: { select: { category_id: true } } } },
-      wishlists: { select: { courses: { select: { category_id: true } } } },
+      enrollments: { 
+        select: { 
+          course_id: true,
+          courses: { 
+            select: { 
+              category_id: true 
+            } 
+          } 
+        } 
+      },
+      wishlists: { 
+        select: { 
+          course_id: true,
+          courses: { 
+            select: { 
+              category_id: true 
+            } 
+          } 
+        } 
+      },
     },
   });
 
-  if (!u) {
+  if (!user) {
     throw new AppError(404, "User Not Found");
   }
+
+  // Extract category IDs from enrolled and wishlisted courses
   const categoryIds = [
     ...new Set(
       [
-        ...(u?.enrollments.flatMap((e) => e.courses.category_id) || []),
-        ...(u?.wishlists.flatMap((w) => w.courses.category_id) || []),
+        ...(user.enrollments.map(e => e.courses?.category_id) || []),
+        ...(user.wishlists.map(w => w.courses?.category_id) || []),
       ].filter((n): n is number => typeof n === "number")
     ),
   ];
@@ -38,19 +58,14 @@ export async function getFieldFocusedSuggestions(userId: number) {
     return [];
   }
 
-  // Exclude already enrolled courses
-  const enrolled = await prisma.enrollments.findMany({
-    where: { user_id: userId },
-    select: { course_id: true },
-  });
-
-  const exclude = enrolled.map((e) => e.course_id);
+  // Get IDs of courses the user is already enrolled in
+  const enrolledCourseIds = user.enrollments.map(e => e.course_id);
 
   const suggestions = await prisma.courses.findMany({
     where: {
       is_published: true,
       category_id: { in: categoryIds },
-      id: { notIn: exclude },
+      id: { notIn: enrolledCourseIds },
     },
     take: 8,
     select: {
@@ -60,13 +75,10 @@ export async function getFieldFocusedSuggestions(userId: number) {
       total_duration: true,
       difficulty: true,
       slug: true,
-      instructors: {
+      user: {
         select: {
-          users: {
-            select: {
               full_name: true,
-            },
-          },
+       
         },
       },
       categories: { select: { name: true } },
@@ -76,7 +88,7 @@ export async function getFieldFocusedSuggestions(userId: number) {
         select: { user_id: true },
       },
     },
-    orderBy: [{ wishlists: { _count: "desc" } }, { created_at: "desc" }],
+    orderBy: [{ enrollments: { _count: "desc" } }, { created_at: "desc" }],
   });
 
   await setInCache(cacheKey, suggestions, 30 * 60);

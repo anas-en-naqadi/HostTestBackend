@@ -11,8 +11,7 @@ export class AuthValidation {
   public static errors : String[] = [];
   private static passwordRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  private static usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-  private static nameRegex = /^[a-zA-Z\s-']{2,50}$/;
+  private static usernameRegex = /^@[a-zA-Z0-9_]+$/;
 
   static validateLogin(data: ILoginRequest): void {
     if (!data.email || !data.password) {
@@ -55,7 +54,7 @@ export class AuthValidation {
     if (!this.usernameRegex.test(data.username)) {
       throw new AppError(
         400,
-        "Username must be 3-20 characters long and can only contain letters, numbers, and underscores"
+        "Username must start with @ and can only contain letters, numbers, and underscores"
       );
     }
 

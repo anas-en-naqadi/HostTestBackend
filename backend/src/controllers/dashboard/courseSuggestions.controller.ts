@@ -28,7 +28,7 @@ export async function fieldSuggestionsController(
       difficulty: c.difficulty,
       duration: c.total_duration,
       slug: c.slug,
-      instructorName: c.instructors?.users?.full_name || 'Unknown',
+      instructorName: c?.user?.full_name || 'Unknown',
       isInWishList: c.wishlists?.length > 0,
     }));
     

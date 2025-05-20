@@ -24,6 +24,9 @@ export const removeCourseBySlug = async (slug: string): Promise<void> => {
 
     // Clear relevant cache by prefix
     await clearCacheByPrefix(CACHE_KEYS.COURSES);
+    await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}`));
+    await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `detail-${slug}`));
+
       
     // Invalidate caches
     try {

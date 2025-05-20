@@ -1,29 +1,72 @@
-import { PrismaClient, announcements } from '@prisma/client';
-import redis from '../../config/redis';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const getAnnouncementsCacheKey = (userId: number) => `announcements:${userId}`;
 
-export const getAnnouncements = async (userId: number): Promise<announcements[]> => {
-  const cacheKey = getAnnouncementsCacheKey(userId);
-  const cachedData = await redis.get(cacheKey);
 
-  // console.log('Cache check:', cacheKey, 'Cached:', cachedData);
-  if (cachedData) return JSON.parse(cachedData);
+export const getAnnouncements = async (userId: number, isAdmin: boolean): Promise<any[]> => {
+  // For admins, return all announcements
+  if (isAdmin) {
+    return await prisma.announcements.findMany({
+      include: {
+        courses: {
+          select: {
+            id: true,
+            title: true,
+            thumbnail_url: true,
+            instructor_id: true,
+            user: {
+              select: {
+                id: true,
+                full_name: true,
+                instructors: {
+                  select: {
+                    id: true,
+                    specialization: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+  }
 
-  const instructorIds = (await prisma.instructors.findMany({ where: { user_id: userId }, select: { id: true } })).map(i => i.id);
-  console.log('Instructor IDs for user', userId, ':', instructorIds);
-
-  const announcements = await prisma.announcements.findMany({
+  // Return announcements for courses they teach or are enrolled in
+  return await prisma.announcements.findMany({
     where: {
       OR: [
-        { courses: { enrollments: { some: { user_id: userId } } } },
-        { courses: { instructor_id: { in: instructorIds } } },
-      ],
+        { courses: { instructor_id: userId } }, // Courses they teach
+        { courses: { enrollments: { some: { user_id: userId } } } } // Courses they're enrolled in
+      ]
     },
+    include: {
+      courses: {
+        select: {
+          id: true,
+          title: true,
+          thumbnail_url: true,
+          instructor_id: true,
+          user: {
+            select: {
+              id: true,
+              full_name: true,
+              instructors: {
+                select: {
+                  id: true,
+                  specialization: true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    orderBy: {
+      created_at: 'desc'
+    }
   });
-
-  console.log('Found announcements:', announcements);
-  await redis.set(cacheKey, JSON.stringify(announcements), 'EX', 3600);
-  return announcements;
 };

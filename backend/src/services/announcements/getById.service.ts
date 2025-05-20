@@ -12,11 +12,11 @@ export const getAnnouncementById = async (userId: number, id: number): Promise<a
 
   const announcement = await prisma.announcements.findUnique({
     where: { id },
-    include: { courses: { include: { enrollments: true, instructors: true } } },
+    include: { courses: { include: { enrollments: true, user: {select:{id:true}} } } },
   });
 
   const isEnrolled = announcement?.courses.enrollments.some(e => e.user_id === userId);
-  const isInstructor = announcement?.courses.instructors?.user_id === userId;
+  const isInstructor = announcement?.courses.user?.id === userId;
 
   if (!announcement || (!isEnrolled && !isInstructor)) {
     throw new Error('Announcement not found or user not enrolled in the course');

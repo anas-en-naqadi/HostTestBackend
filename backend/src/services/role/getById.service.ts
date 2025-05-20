@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { RoleResponse } from '../../types/role.types';
 import { AppError } from '../../middleware/error.middleware';
-import { CACHE_KEYS, generateCacheKey, getFromCache, setInCache } from '../../utils/cache.utils';
 
 const prisma = new PrismaClient();
 
@@ -12,11 +11,6 @@ const prisma = new PrismaClient();
  * @throws AppError if role not found
  */
 export const getRoleById = async (id: number): Promise<RoleResponse> => {
-  const cacheKey = generateCacheKey(CACHE_KEYS.ROLES, id);
-
-  // Try to get the role from cache first
-  const cached = await getFromCache<RoleResponse>(cacheKey);
-  if (cached) return cached;
 
   // If not found in cache, fetch from database
   const role = await prisma.roles.findUnique({
@@ -48,8 +42,6 @@ export const getRoleById = async (id: number): Promise<RoleResponse> => {
     permissions: role.role_permissions.map((permission) => permission.permissions),
   };
 
-  // Save to cache
-  await setInCache(cacheKey, roleResponse);
 
   return roleResponse;
 };

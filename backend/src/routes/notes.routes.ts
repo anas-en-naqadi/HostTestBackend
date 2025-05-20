@@ -1,21 +1,17 @@
 // src/routes/notes.routes.ts
 import { Router } from 'express';
-import { authenticate, hasRole } from '../middleware/auth.middleware';
-import { listNotesController } from '../controllers/notes/list.controller';
+import { authenticate, hasRole, hasPermission } from '../middleware/auth.middleware';
 import { createNoteController } from '../controllers/notes/create.controller';
 import { updateNoteController } from '../controllers/notes/update.controller';
 import { removeNoteController } from '../controllers/notes/remove.controller';
-import { getNoteByIdController } from '../controllers/notes/getById.controller';
 import { UserRole } from '../types/user.types';
 
 const router = Router();
 
-router.use(authenticate,hasRole(UserRole.INTERN));
+router.use(authenticate, hasRole([UserRole.INTERN,UserRole.INSTRUCTOR,UserRole.ADMIN]));
 // Apply authentication middleware to all notes routes
-router.get('/', listNotesController);
-router.post('/', createNoteController);
-router.put('/:id', updateNoteController);
-router.delete('/:id', removeNoteController);
-router.get('/:id', getNoteByIdController);
+router.post('/', hasPermission('note:create'), createNoteController);
+router.put('/:id', hasPermission('note:update'), updateNoteController);
+router.delete('/:id', hasPermission('note:delete'), removeNoteController);
 
 export default router;

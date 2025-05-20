@@ -7,15 +7,19 @@ import { sendEmail } from '../../utils/email.utils';
 import { UserResponse } from 'types/user.types';
 
 const prisma = new PrismaClient();
-
+type user = {id:number,full_name:string};
+interface promiseReturn {
+  user:user;
+  token:string;
+}
 export class PasswordResetService {
   private static async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 12);
   }
 
-  static async generateResetToken(email: string): Promise<string> {
+  static async generateResetToken(email: string): Promise<promiseReturn> {
     const user = await prisma.users.findUnique({
-      where: { email }
+      where: { email } , select:{id:true,full_name:true}
     });
 
     if (!user) {
@@ -41,11 +45,11 @@ export class PasswordResetService {
       }
     });
 
-    return token;
+    return {token,user};
   }
 
-  static async sendPasswordResetEmail(email: string): Promise<void> {
-    const token = await this.generateResetToken(email);
+  static async sendPasswordResetEmail(email: string): Promise<{id:number,full_name:string} | undefined> {
+    const {token,user} = await this.generateResetToken(email);
     
     if (!token) {
       // Don't reveal that the email doesn't exist
@@ -68,6 +72,7 @@ export class PasswordResetService {
     };
 
     await sendEmail(emailOptions);
+    return user ;
   }
 
   static async resetPassword(data: IResetPasswordRequest): Promise<{id:number,full_name:string}> {
@@ -104,9 +109,10 @@ export class PasswordResetService {
       throw new AppError(400,'Invalid or expired reset token');
     }
   }
-    static async requestPasswordReset(email: string): Promise<void> {
+    static async requestPasswordReset(email: string): Promise<user> {
     // Don't throw error if user not found, just send email logic to avoid enumeration
-    await this.sendPasswordResetEmail(email);
+   const user = await this.sendPasswordResetEmail(email);
+   return user!;
   }
 
 } 

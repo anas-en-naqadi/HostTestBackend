@@ -7,7 +7,7 @@ import {
   EmailVerificationController,
   PasswordResetController,
 } from "../controllers/auth";
-import { authenticate } from "../middleware/auth.middleware";
+import { authenticate, hasPermission } from "../middleware/auth.middleware";
 
 const router = Router();
 

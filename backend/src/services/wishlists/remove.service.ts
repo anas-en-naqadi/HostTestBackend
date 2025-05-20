@@ -11,14 +11,14 @@ import redis from "../../config/redis";
 const prisma = new PrismaClient();
 const getWishlistsCachePattern = (userId: number) => `wishlists:${userId}:*`;
 
-
 export const deleteWishlist = async (
   userId: number,
   courseId: number,
-  mainCourseId?:number | null,
+  mainCourseId?: number | null
 ): Promise<void> => {
   const course = await prisma.courses.findUnique({
-    where: { id: courseId }  });
+    where: { id: courseId },
+  });
   if (!course) {
     throw new AppError(404, "Course not Found");
   }
@@ -45,13 +45,13 @@ export const deleteWishlist = async (
     );
   }
   const pattern = `wishlists:${userId}:*`;
-
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${course.slug}`);
+  await deleteFromCache(cacheKey);
   const keys = await redis.keys(pattern);
-  
+
   if (keys.length > 0) {
     await redis.del(...keys);
   }
-  
-ClearDashboardCache(userId);
- 
+
+  ClearDashboardCache(userId);
 };

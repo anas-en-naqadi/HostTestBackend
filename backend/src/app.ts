@@ -19,8 +19,8 @@ import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import categoryRoutes from './routes/category.routes';
-import instructorRoutes from './routes/instructor.routes';
 import roleRoutes from './routes/role.routes';
+import permissionRoutes from './routes/permission.routes';
 import activityLogRoutes from './routes/activity_log.routes';
 import notificationRoutes from './routes/notification.route';
 import courseRoutes from './routes/course.routes';
@@ -35,14 +35,16 @@ import notesRoutes from './routes/notes.routes';
 import announcementsRoutes from './routes/announcements.routes';
 import certificatesRoutes from './routes/certificates.routes';
 import wishlistsRoutes from './routes/wishlists.routes';
+import AdminDashboardRoutes from './routes/admin_dashboard.routes';
+import instructorDashboardRoutes from './routes/instructor_dashboard.routes'
 
 loadEnv();
 const app = express();
-app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: ["https://host-test-frontend-kaa6-mi6m83fp0-anas-ennaqadis-projects.vercel.app","https://host-test-frontend-kaa6-git-main-anas-ennaqadis-projects.vercel.app","https://forge-api.smartchargecampus.space"] ,
+  origin: process.env.FRONTEND_URL ,
   credentials: true,
   methods: ['GET','POST','PUT','DELETE'],
   allowedHeaders: ['Content-Type','Authorization']
@@ -62,10 +64,14 @@ app.use(sanitizeRequest);
 // Logging
 app.use(logSecurityEvent);
 
+// Setup static file serving for uploads
+import { setupStaticMiddleware } from './middleware/static.middleware';
+setupStaticMiddleware(app);
+
 // Rate limiting (auth endpoints)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 15,
   message: 'Too many requests from this IP, please try again later',
 });
 app.use('/api/auth/login', authLimiter);
@@ -103,9 +109,10 @@ app.get('/health', (async (_: Request, res: Response, next: NextFunction) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/instructor/dashboard', instructorDashboardRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/instructors', instructorRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/permissions', permissionRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/courses', courseRoutes);
@@ -119,7 +126,7 @@ app.use('/api/notes',           notesRoutes);
 app.use('/api/announcements',   announcementsRoutes);
 app.use('/api/certificates',    certificatesRoutes);
 app.use('/api/wishlists',       wishlistsRoutes);
-
+app.use('/api/AdminDashboard', AdminDashboardRoutes);
 // not found route handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not Found' });

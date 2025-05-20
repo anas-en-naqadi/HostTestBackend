@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '../../utils/api.utils';
 import {  UserResponse } from '../../types/user.types';
 import { CACHE_KEYS, getFromCache, setInCache } from '../../utils/cache.utils';
 import { ApiResponse } from '../../utils/api.utils';
+import { AppError } from '../../middleware/error.middleware';
 /**
  * Controller to get all users
  * @param req Express request
@@ -11,24 +12,18 @@ import { ApiResponse } from '../../utils/api.utils';
  * @returns Response with list of users
  */
 export const listUsersController = async (
-  _req: Request, 
+  req: Request, 
   res: Response<ApiResponse<UserResponse[]>>
 ): Promise<void> => {
   try {
-    // Try to get from cache first
-    const cachedUsers = await getFromCache<UserResponse[]>(CACHE_KEYS.USERS);
-    if (cachedUsers) {
-      console.log('Returning users from cache');
-       successResponse(res, cachedUsers, 'Users retrieved from cache');
-    }
+    const userId = req.user?.id;
 
+    if(!userId){
+      throw new AppError(401,'User is unauthenticated');
+    }
     // If not in cache, get from service
-    const users = await listUsers();
-    
-    // Store in cache for future requests
-    await setInCache(CACHE_KEYS.USERS, users);
-    console.log('Users stored in cache');
-    
+    const users = await listUsers(userId);
+      
      successResponse(res, users);
   } catch (error) {
     console.error('Error fetching users:', error);

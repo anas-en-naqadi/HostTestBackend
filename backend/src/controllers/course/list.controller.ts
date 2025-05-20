@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { listAllCourses } from '../../services/course';
 import { successResponse, errorResponse } from '../../utils/api.utils';
 import { ApiResponse } from '../../types/category.types';
-import { CourseResponse } from '../../types/course.types';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const listCoursesController = async (
   req: Request,
@@ -41,6 +41,13 @@ export const listCoursesController = async (
     // Call the service with pagination, filters, and userId
     const { courses, pagination } = await listAllCourses(page, limit, filters, userId);
     
+    logActivity(
+      userId!,
+      'COURSE_LIST',
+      `${req.user!.full_name} Listed courses (page ${pagination.currentPage}, limit ${pagination.limit}, filters: ${JSON.stringify(filters)})`,
+      req.ip
+    ).catch(console.error);
+
     // Return the courses array and pagination info together
     successResponse(res, {
       courses,

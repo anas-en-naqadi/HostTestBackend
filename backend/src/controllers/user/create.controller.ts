@@ -18,9 +18,6 @@ export const createUserController = async (
   try {
     const newUser = await createUser(req.body);
     
-
-    await clearCacheByPrefix(CACHE_KEYS.USERS);
-
     
      successResponse(res, newUser, 'User created successfully', 201);
   } catch (error) {

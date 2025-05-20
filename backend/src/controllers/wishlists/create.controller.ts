@@ -36,7 +36,7 @@ export const createWishlistController = async (
      await logActivity(
       userId,
       'WISHLIST_ADD',
-      `Added course ${courseId} to wishlist`,
+      `${user.full_name} added course ID ${courseId} to wishlist`,
       ipAddress
     ).catch(console.error);
 

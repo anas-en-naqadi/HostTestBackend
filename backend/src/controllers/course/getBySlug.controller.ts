@@ -3,6 +3,7 @@ import {getCourseBySlug} from '../../services/course/listBySlug.service';
 import { errorResponse, successResponse } from "../../utils/api.utils";
 import { AppError } from "../../middleware/error.middleware";
 import { Lesson, Module } from "types/course.types";
+import { logActivity } from "../../utils/activity_log.utils";
 
 export const getCourseBySlugController = async (req: Request, res: Response) => {
   try {
@@ -52,6 +53,14 @@ export const getCourseBySlugController = async (req: Request, res: Response) => 
       isEnrolled:   Object.keys(course.enrollments).length > 0,
       notes
     };
+
+    logActivity(
+      userId,
+      'COURSE_WATCH',
+      `${req.user!.full_name} watched course with slug "${slug}"`,
+      req.ip
+    ).catch(console.error);
+
     successResponse(res, learn_detail);
   } catch (err) {
     console.log(err)

@@ -47,10 +47,10 @@ export const listAllCourses = async (
           { subtitle: { contains: searchQuery, mode: 'insensitive' } },
           { description: { contains: searchQuery, mode: 'insensitive' } },
           {
-            instructors: {
-              users: {
+            user: {
+            
                 full_name: { contains: searchQuery, mode: 'insensitive' }
-              }
+              
             }
           },
           {
@@ -115,12 +115,16 @@ export const listAllCourses = async (
         is_published: true,
         subtitle: true,
         created_at: true,
-        instructors: {
+        user: {
           select: {
-            id: true,
+            id:true,
+            instructors:{
+           select:{
+             id: true,
             specialization: true,
-            users: { select: { full_name: true } },
-          },
+           }
+            }
+          }
         },
         categories: { select: { name: true } },
         _count: { select: { enrollments: true } },

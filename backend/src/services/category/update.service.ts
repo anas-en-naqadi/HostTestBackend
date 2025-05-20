@@ -1,11 +1,14 @@
 // src/services/category/update.service.ts
 
-import { PrismaClient, Prisma } from '@prisma/client';
-import slugify from 'slugify';
-import { AppError } from '../../middleware/error.middleware';
-import { UpdateCategoryDto, CategoryResponse } from '../../types/category.types';
-import { deleteFromCache,clearCacheByPrefix } from '../../utils/cache.utils';
-import { CACHE_KEYS, generateCacheKey } from '../../utils/cache.utils';
+import { PrismaClient, Prisma } from "@prisma/client";
+import slugify from "slugify";
+import { AppError } from "../../middleware/error.middleware";
+import {
+  UpdateCategoryDto,
+  CategoryResponse,
+} from "../../types/category.types";
+import { CACHE_KEYS, deleteFromCache, generateCacheKey } from "../../utils/cache.utils";
+
 const prisma = new PrismaClient();
 
 /**
@@ -22,39 +25,39 @@ export const updateCategory = async (
   }
 
   try {
-     const category = await prisma.categories.update({
-      where: { slug:slug },
+    const category = await prisma.categories.update({
+      where: { slug: slug },
       data,
       select: { id: true, name: true, slug: true },
     });
-     // Invalidate caches
-  try {
-    // Delete the specific user cache
-    await deleteFromCache(generateCacheKey(CACHE_KEYS.USER, slug));
-    
-    // Clear the users list cache
-    await clearCacheByPrefix(CACHE_KEYS.CATEGORY);
-    
-    console.log(`Cache invalidated for user ${slug} and users list`);
-  } catch (error) {
-    console.error('Error invalidating cache:', error);
-    // Continue execution even if cache invalidation fails
-  }
-  return category;
 
+    // First fetch all courses in this category
+    const courses = await prisma.courses.findMany({
+      where: { category_id: category.id },
+      select: { slug: true }
+    });
+
+    // Delete cache for each related course
+    await Promise.all(
+      courses.map(course => 
+        deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${course.slug}`))
+      )
+    );
+
+    return category;
   } catch (err) {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === 'P2025'
+      err.code === "P2025"
     ) {
-      throw new AppError(404, 'Category not found');
+      throw new AppError(404, "Category not found");
     }
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === 'P2002'
+      err.code === "P2002"
     ) {
-      throw new AppError(409, 'Category with this name already exists');
+      throw new AppError(409, "Category with this name already exists");
     }
-    throw new AppError(500, 'Could not update category');
+    throw new AppError(500, "Could not update category");
   }
 };

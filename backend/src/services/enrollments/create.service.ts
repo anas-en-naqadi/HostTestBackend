@@ -7,6 +7,8 @@ import {
   generateCacheKey,
 } from "../../utils/cache.utils";
 import { ClearDashboardCache } from "../../utils/clear_cache.utils";
+import { sendNotification } from "../../utils/notification.utils";
+
 const prisma = new PrismaClient();
 const getEnrollmentsCachePattern = (userId: number) =>
   `enrollments:${userId}:*`;
@@ -28,7 +30,6 @@ export const createEnrollment = async (
     },
   });
   if (!courseExists) throw new AppError(404, "Course not found");
-
   const existingEnrollment = await prisma.enrollments.findUnique({
     where: { user_id_course_id: { user_id: userId, course_id: courseId } },
   });
@@ -44,6 +45,29 @@ export const createEnrollment = async (
       last_accessed_lesson_id: courseExists.modules[0].lessons[0].id,
     },
   });
+  const enriched = await prisma.enrollments.findUnique({
+    where: { id: enrollment.id },
+    include: {
+      users: { select: { full_name: true } },
+      courses: {
+        select: {
+          title: true,
+          thumbnail_url:true,
+          user: { select: { id: true } },
+        },
+      },
+    },
+  });
+  if (enriched) {
+    const notificationDto = {
+      title: "New Enrollment",
+      user_id: enriched.courses.user.id,
+      type: "ENROLLMENT",
+      content: `${enriched.users?.full_name} just enrolled in <b>${enriched.courses.title}</b>`,
+      metadata: {thumbnail_url:enriched.courses.thumbnail_url},
+    };
+    await sendNotification(notificationDto,userId, "intern");
+  }
   await deleteFromCache(
     generateCacheKey(CACHE_KEYS.COURSE, `detail-${courseExists.slug}`)
   );

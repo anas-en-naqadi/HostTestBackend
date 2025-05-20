@@ -9,14 +9,7 @@ const prisma = new PrismaClient();
  * @returns List of roles
  */
 export const getRolesList = async (): Promise<RoleResponse[]> => {
-  // Generate a cache key based on the roles list
-  const cacheKey = generateCacheKey(CACHE_KEYS.ROLES, 'list');
 
-  // Try to get the roles from the cache
-  const cachedRoles = await getFromCache<RoleResponse[]>(cacheKey);
-  if (cachedRoles) {
-    return cachedRoles;
-  }
 
   // If not found in cache, get the roles from the database
   const roles = await prisma.roles.findMany({
@@ -28,6 +21,7 @@ export const getRolesList = async (): Promise<RoleResponse[]> => {
         select: {
           permissions: {
             select: {
+              id:true,
               name: true,
             },
           },
@@ -36,8 +30,7 @@ export const getRolesList = async (): Promise<RoleResponse[]> => {
     },
   });
 
-  // Store the roles in the cache with a TTL (Time to Live) if needed
-  await setInCache(cacheKey, roles);
+
   const roleResponse: RoleResponse[] =roles.map((role) => ({
     id: role.id,
     name: role.name,

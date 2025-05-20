@@ -38,28 +38,25 @@ export const getEnrollments = async (
         select: {
           subtitle: true,
           title: true,
-          slug:true,
+          slug: true,
           thumbnail_url: true,
           modules: {
             include: {
               lessons: {
                 include: {
                   lesson_progress: {
-                    where:{
-                      user_id:userId
-                    }
+                    where: {
+                      user_id: userId,
+                    },
                   },
                 },
               },
             },
           },
-          instructors: {
+          user: {
             select: {
-              users: {
-                select: {
-                  full_name: true,
-                },
-              },
+              full_name: true,
+              instructors:true
             },
           },
         },
@@ -70,7 +67,6 @@ export const getEnrollments = async (
   });
 
   const totalPages = Math.ceil(totalCount / limit);
-
 
   const result = {
     enrollments,
@@ -83,4 +79,3 @@ export const getEnrollments = async (
   await redis.set(cacheKey, JSON.stringify(result), "EX", 3600);
   return result;
 };
-

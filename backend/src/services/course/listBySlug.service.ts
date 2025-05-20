@@ -54,15 +54,15 @@ export const getCourseBySlug = async (slug: string,userId:number): Promise<any> 
             created_at:true,
           },
         },
-        instructors: {
+        user: {
           select: {
-            id: true,
+            id:true,
+            full_name:true,
+            instructors: {
+              select: {
+                  id: true,
             description: true,
             specialization: true,
-            users: {
-              select: {
-                id: true,
-                full_name: true,
               },
             },
           },
@@ -112,6 +112,7 @@ export const getCourseBySlug = async (slug: string,userId:number): Promise<any> 
                   select: {
                     id: true,
                     title: true,
+                    duration_time:true,
                     quiz_attempts:{
                       where:{
                         user_id:userId

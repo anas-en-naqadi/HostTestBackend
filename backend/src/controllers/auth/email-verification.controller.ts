@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { EmailVerificationService } from '../../services/auth/email-verification.service';
 import { AppError } from '../../middleware/error.middleware';
 import { AuthValidation } from '../../validation/auth.validation';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export class EmailVerificationController {
   static async verifyEmail(req: Request, res: Response): Promise<void> {
@@ -12,7 +13,14 @@ export class EmailVerificationController {
       AuthValidation.validateEmailVerification({ token });
 
       // Verify email
-      await EmailVerificationService.verifyEmail(token);
+    const user =  await EmailVerificationService.verifyEmail(token);
+
+      logActivity(
+        user.id,
+        'USER_EMAIL_VERIFIED',
+        `${user.full_name} verified their email`,
+        req.ip
+      ).catch(console.error);
 
       res.status(200).json({ message: 'Email verified successfully' });
     } catch (error) {
@@ -32,7 +40,14 @@ export class EmailVerificationController {
       AuthValidation.validateForgotPassword(email);
 
       // Resend verification email
-      await EmailVerificationService.resendVerificationEmail(email);
+   const user =   await EmailVerificationService.resendVerificationEmail(email);
+   
+      logActivity(
+        user.id,
+        'USER_RESEND_VERIFICATION',
+        `${user.full_name} requested a new verification email`,
+        req.ip
+      ).catch(console.error);
 
       res.status(200).json({ message: 'Verification email sent successfully' });
     } catch (error) {

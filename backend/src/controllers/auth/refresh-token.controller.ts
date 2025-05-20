@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { RefreshTokenService } from '../../services/auth/refresh-token.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export class RefreshTokenController {
   static async refreshToken(req: Request, res: Response): Promise<void> {
@@ -16,16 +17,24 @@ export class RefreshTokenController {
       // Pass the refresh token to the service for verification and generation of a new access token
       const result = await RefreshTokenService.refreshToken(refreshToken);
 
+      logActivity(
+        result.user.id,
+        'USER_REFRESH_TOKEN',
+        `${result.user.full_name} refreshed their access token`,
+        req.ip
+      ).catch(console.error);
+
       res
       .cookie('refresh_token', result.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
+        path: '/', // Set to root path so it's sent with all API requests
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
       })
       .status(200)
       .json({
-        accessToken: result.accessToken,
+        token: result.accessToken,
         user: result.user
       });
     

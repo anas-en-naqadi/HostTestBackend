@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { createNote } from '../../services/notes/create.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const createNoteController = async (
   req: Request,
@@ -42,6 +43,13 @@ export const createNoteController = async (
       content,
       noted_at
     });
+
+    logActivity(
+      userId,
+      'NOTE_CREATE',
+      `${user.full_name} Created a note on lesson ID ${lessonId}`,
+      req.ip
+    ).catch(console.error);
 
     res.status(201).json({ 
       success: true,

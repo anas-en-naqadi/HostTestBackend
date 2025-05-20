@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { UserResponse } from '../../types/user.types';
 import { AppError } from '../../middleware/error.middleware';
-import { CACHE_KEYS, deleteFromCache, clearCacheByPrefix } from '../../utils/cache.utils';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -102,16 +101,6 @@ export const updateUserProfile = async (id: number, data: {
     },
   });
 
-  // Invalidate both specific user cache and users list cache
-  try {
-    const userCacheKey = `${CACHE_KEYS.USER}:${id}`;
-    await deleteFromCache(userCacheKey);
-    await clearCacheByPrefix(CACHE_KEYS.USERS);
-    console.log('Cache invalidated for user and users list after profile update');
-  } catch (error) {
-    console.error('Error invalidating cache:', error);
-    // Continue execution even if cache invalidation fails
-  }
 
   // Transform to match UserResponse interface
   const userResponse: UserResponse = {

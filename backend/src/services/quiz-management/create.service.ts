@@ -1,6 +1,10 @@
 // src/services/quiz-management/create.service.ts
-import { PrismaClient } from '@prisma/client';
-import redis from "../../config/redis";
+import { PrismaClient } from "@prisma/client";
+import {
+  CACHE_KEYS,
+  deleteFromCache,
+  generateCacheKey,
+} from "../../utils/cache.utils";
 const prisma = new PrismaClient();
 
 interface OptionInput {
@@ -17,12 +21,19 @@ interface QuizInput {
   title: string;
   duration_time: number;
   questions: QuestionInput[];
+  isFinal?: boolean;
 }
 
-export const createQuizWithDetails = async (userId: number, data: QuizInput) => {
+export const createQuizWithDetails = async (
+  userId: number,
+  data: QuizInput
+) => {
   const user = await prisma.users.findUnique({ where: { id: userId } });
-  if (!user || (user.role_id !== 1 && user.role_id !== 2)) { // 1 = admin, 2 = instructor
-    throw new Error('Unauthorized: Only instructors or admins can create quizzes');
+  if (!user || (user.role_id !== 1 && user.role_id !== 2)) {
+    // 1 = admin, 2 = instructor
+    throw new Error(
+      "Unauthorized: Only instructors or admins can create quizzes"
+    );
   }
 
   const quiz = await prisma.$transaction(async (tx) => {
@@ -30,9 +41,23 @@ export const createQuizWithDetails = async (userId: number, data: QuizInput) => 
       data: {
         title: data.title,
         duration_time: data.duration_time,
-        created_by: userId, 
+        isFinal: data.isFinal || false,
+        created_by: userId,
         created_at: new Date(),
         updated_at: new Date(),
+      },
+    });
+
+    const lesson = await tx.lessons.findFirst({
+      where: { quiz_id: newQuiz.id },
+      select: {
+        modules: {
+          select: {
+            courses: {
+              select: { slug: true },
+            },
+          },
+        },
       },
     });
 
@@ -47,7 +72,7 @@ export const createQuizWithDetails = async (userId: number, data: QuizInput) => 
       });
 
       await tx.options.createMany({
-        data: q.options.map(opt => ({
+        data: q.options.map((opt) => ({
           question_id: newQuestion.id,
           text: opt.text,
           is_correct: opt.is_correct,
@@ -57,9 +82,14 @@ export const createQuizWithDetails = async (userId: number, data: QuizInput) => 
       });
     }
 
+    await deleteFromCache(
+      generateCacheKey(
+        CACHE_KEYS.COURSE,
+        `learn-${lesson?.modules.courses?.slug}`
+      )
+    );
     return newQuiz;
   });
 
-  await redis.del(`quizzes:${userId}`);
   return quiz;
 };

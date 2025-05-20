@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { createLessonProgress } from '../../services/lesson-progress/create.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const postLessonProgressController = async (
   req: Request,
@@ -36,6 +37,14 @@ export const postLessonProgressController = async (
     }
 
     const progress = await createLessonProgress(userId, Number(lessonId),slug,completed_at);
+
+    logActivity(
+      userId,
+      'LESSON_PROGRESS_CREATE',
+      `${user.full_name} completed progress for lesson ID ${lessonId} (course slug "${slug}")`,
+      req.ip
+    ).catch(console.error);
+
     res.status(201).json({ 
       success: true, 
       message: 'Lesson progress created successfully', 

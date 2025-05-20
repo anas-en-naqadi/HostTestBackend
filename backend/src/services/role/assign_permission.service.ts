@@ -2,7 +2,6 @@
 
 import { PrismaClient, Prisma } from "@prisma/client";
 import { AssignPermissionDto } from "../../types/role.types";
-import { clearCacheByPrefix, CACHE_KEYS } from "../../utils/cache.utils";
 import { AppError } from "../../middleware/error.middleware";
 
 const prisma = new PrismaClient();
@@ -43,7 +42,7 @@ export const assignPermission = async (dto: AssignPermissionDto[]): Promise<void
       skipDuplicates: true, // avoids error if permission already assigned
     });
 
-    await clearCacheByPrefix(CACHE_KEYS.ROLES);
+
   } catch (err) {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&

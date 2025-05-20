@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import { UpdateRoleDto, RoleResponse } from '../../types/role.types';
-import { clearCacheByPrefix, CACHE_KEYS } from '../../utils/cache.utils';
 import { AppError } from '../../middleware/error.middleware';
 
 const prisma = new PrismaClient();
@@ -28,7 +27,6 @@ export const updateRole = async (
     },
   });
 
-  // Clear cache by prefix to keep it fresh
-  await clearCacheByPrefix(CACHE_KEYS.ROLES);
+
   return updated as RoleResponse;
 };

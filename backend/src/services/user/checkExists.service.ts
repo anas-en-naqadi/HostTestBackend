@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { AppError } from '../../middleware/error.middleware';
 
 const prisma = new PrismaClient();
 
@@ -7,23 +8,42 @@ const prisma = new PrismaClient();
  * @param email User email
  * @param username User username
  * @param excludeId User ID to exclude from check (for updates)
- * @returns Promise with boolean indicating if user exists
+ * @throws AppError with 409 status if user exists
  */
 export const checkUserExists = async (
   email?: string, 
   username?: string, 
   excludeId?: number
-): Promise<boolean> => {
-  if (!email && !username) return false;
+): Promise<void> => {
+  if (!email && !username) return;
 
-  const where: any = {
-    OR: [],
-  };
+  // First check email if provided
+  if (email) {
+    const whereEmail: any = { email };
+    if (excludeId) whereEmail.NOT = { id: excludeId };
 
-  if (email) where.OR.push({ email });
-  if (username) where.OR.push({ username });
-  if (excludeId) where.NOT = { id: excludeId };
+    const existingUserWithEmail = await prisma.users.findFirst({ 
+      where: whereEmail,
+      select: { id: true } // Only select what we need
+    });
+    
+    if (existingUserWithEmail) {
+      throw new AppError(409, 'User with this email already exists');
+    }
+  }
 
-  const existingUser = await prisma.users.findFirst({ where });
-  return !!existingUser;
-}; 
+  // Then check username if provided
+  if (username) {
+    const whereUsername: any = { username };
+    if (excludeId) whereUsername.NOT = { id: excludeId };
+
+    const existingUserWithUsername = await prisma.users.findFirst({ 
+      where: whereUsername,
+      select: { id: true } // Only select what we need
+    });
+    
+    if (existingUserWithUsername) {
+      throw new AppError(409, 'User with this username already exists');
+    }
+  }
+};

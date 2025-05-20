@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { createAnnouncement } from '../../services/announcements/create.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const createAnnouncementController = async (
   req: Request,
@@ -41,6 +42,13 @@ export const createAnnouncementController = async (
       title,
       content
     });
+
+    logActivity(
+      userId,
+      'ANNOUNCEMENT_CREATED',
+      `${user.full_name} created an announcement for course ID ${courseId}`,
+      req.ip
+    ).catch(console.error);
 
     res.status(201).json({ 
       success: true,

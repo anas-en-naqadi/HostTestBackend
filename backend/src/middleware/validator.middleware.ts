@@ -27,10 +27,10 @@ export const validate =
       return next(new AppError(400, 'Slug is required'));
     }
   
-    // Regex to ensure only lowercase letters and hyphens are allowed
-    const slugPattern = /^[a-z-]+$/;
+    // Regex to ensure only lowercase letters, numbers, and hyphens are allowed
+    const slugPattern = /^[a-z0-9-]+$/;
     if (!slugPattern.test(slug)) {
-      return next(new AppError(400, 'Slug must contain only lowercase letters and hyphens, without numbers'));
+      return next(new AppError(400, 'Slug must contain only lowercase letters, numbers, and hyphens'));
     }
   
     next();

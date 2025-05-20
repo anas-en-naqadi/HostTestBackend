@@ -17,10 +17,9 @@ export interface EnrollmentWithCourse {
           lesson_progress: Array<unknown>;
         }>;
       }>;
-      instructors: {
-        users: {
+      user: {
           full_name: string;
-        };
+          instructors:object;
       };
     };
   }

@@ -44,7 +44,7 @@ export class LoginService {
   private static generateTokens(payload: ITokenPayload): { token: string; refreshToken: string } {
     const { jwtSecret, jwtRefreshSecret } = this.validateJwtSecrets();
     
-    const token = jwt.sign(payload, jwtSecret, { expiresIn: '1h' });
+    const token = jwt.sign(payload, jwtSecret, { expiresIn: '15m' });
     const refreshToken = jwt.sign(payload, jwtRefreshSecret, { expiresIn: '7d' });
     return { token, refreshToken };
   }
@@ -71,7 +71,7 @@ export class LoginService {
 
       if (!user) {
         console.log('User not found for email:', data.email);
-        throw new AppError(401, 'Invalid credentials');
+        throw new AppError(400, 'Invalid credentials');
       }
 
       console.log('User found:', { id: user.id, email: user.email, status: user.status });
@@ -92,7 +92,7 @@ export class LoginService {
       const isPasswordValid = await this.comparePasswords(data.password, user.password_hash);
       if (!isPasswordValid) {
         console.log('Invalid password for user:', user.email);
-        throw new AppError(401, 'Invalid credentials');
+        throw new AppError(400, 'Invalid credentials');
       }
 
       console.log('Password verified successfully');
@@ -121,7 +121,7 @@ export class LoginService {
       console.log('Updating last login timestamp');
       await prisma.users.update({
         where: { id: user.id },
-        data: { last_login: new Date() }
+        data: { last_login: new Date(),is_online:true }
       });
 
       console.log('Login successful for user:', user.email);

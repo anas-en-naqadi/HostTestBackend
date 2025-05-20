@@ -3,6 +3,7 @@ import { getCourseBySlugAC } from "../../services/course";
 import { errorResponse, successResponse } from "../../utils/api.utils";
 import { AppError } from "../../middleware/error.middleware";
 import { Module } from "types/course.types";
+import { logActivity } from "../../utils/activity_log.utils";
 
 export const getCourseBySlugACController = async (req: Request, res: Response) => {
   try {
@@ -12,9 +13,16 @@ export const getCourseBySlugACController = async (req: Request, res: Response) =
     const userId = req.user!.id; // Make sure your auth middleware adds user to req
 
     const course = await getCourseBySlugAC({slug, userId});
-    const instructorCourses = course.instructors.courses.filter(
+    const instructorCourses = course.user.courses.filter(
       (instructorCourse: any) => instructorCourse.id !== course.id
     );
+
+    logActivity(
+      userId,
+      'COURSE_VIEW',
+      `${req.user!.full_name} Viewed course with slug "${slug}"`,
+      req.ip
+    ).catch(console.error);
     // ✅ Optional: Adjust response structure if needed
     const formattedCourse = {
       id: course.id,
@@ -32,17 +40,17 @@ export const getCourseBySlugACController = async (req: Request, res: Response) =
       categories: course.categories,
       isInWishList:Object.keys(course.wishlists).length > 0,
       instructor: {
-        fullName: course.instructors.users.full_name,
-        specialization: course.instructors.specialization,
-        description: course.instructors.description,
+        fullName: course.user.full_name,
+        specialization: course.user.instructors.specialization,
+        description: course.user.instructors.description,
         otherCourses: instructorCourses.map((c:any) => ({
           id: c.id,
           title: c.title,
-          thumbnail: c.thumbnail_url,
           slug:c.slug,
+          thumbnail: c.thumbnail_url,
           difficulty: c.difficulty,
           duration: c.total_duration,
-          instructorName: c.instructors.users.full_name,
+          instructorName: c.user.full_name,
           isInWishList: Object.keys(c.wishlists).length > 0
         })),
       },

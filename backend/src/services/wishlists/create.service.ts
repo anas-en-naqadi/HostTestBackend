@@ -45,11 +45,12 @@ export const createWishlist = async (
   }
 
   ClearDashboardCache(userId);
-
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${course.slug}`);
+  await deleteFromCache(cacheKey);
   const keys = await redis.keys(getWishlistsCachePattern(userId));
   if (keys.length > 0) {
     // Spread the array so each key is its own argument
     await redis.del(...keys);
   }
-    return wishlist;
+  return wishlist;
 };

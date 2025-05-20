@@ -3,57 +3,48 @@ import { getISOWeekDates } from '../../utils/date.utils';
 import prisma from '../../config/prisma';
 import { generateCacheKey, getFromCache, setInCache } from '../../utils/cache.utils';
 
-export  async function getTimeSpendingData(userId: number) {
-    try {
-      // Get current week's start and end dates
-      const { startDate, endDate } = getISOWeekDates();
-      
-      // Get activity logs for the week
-      const activityLogs = await prisma.activity_logs.findMany({
-        where: {
-          user_id: userId,
-          activity_type: 'course_viewed',
-          created_at: {
-            gte: startDate,
-            lte: endDate
-          }
-        },
-        orderBy: {
-          created_at: 'asc'
-        }
-      });
-      
-      // Group logs by day of week and calculate hours
-      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      const dailyHours = new Array(7).fill(0);
-      
-      // Process activity logs to calculate hours per day
-      activityLogs.forEach(log => {
-        if (!log.created_at) return;
-        
-        const day = log.created_at.getDay(); // 0 = Sunday, 6 = Saturday
-        const dayIndex = day === 0 ? 6 : day - 1; // Convert to Mon-Sun format (0 = Monday)
-        
-        // Assume each activity log represents 15 minutes of activity
-        dailyHours[dayIndex] += 0.25;
-      });
-      
-      // Format data for chart
-      return {
-        labels: dayNames,
-        values: dailyHours
-      };
-    } catch (error) {
-      console.error('Error in getTimeSpendingData:', error);
-      throw new Error('Failed to get time spending data');
-    }
+export async function getTimeSpendingData(userId: number) {
+  // 1) Compute this week’s Monday 00:00 and Sunday 23:59
+  const { startDate, endDate } = getISOWeekDates();
+
+  // 2) Fetch completed lessons for the user within this week
+  const progresses = await prisma.lesson_progress.findMany({
+    where: {
+      user_id: userId,
+      status: 'completed',
+      completed_at: { gte: startDate, lte: endDate }
+    },
+    include: {
+      lessons: { select: { duration: true } } // duration in seconds
+    },
+    orderBy: { completed_at: 'asc' }
+  });
+
+  // 3) Prepare 7-day buckets (Mon=0 … Sun=6)
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dailySeconds = new Array<number>(7).fill(0);
+
+  const getDayIndex = (d: Date) => {
+    const dow = d.getDay(); // 0 = Sun … 6 = Sat
+    return dow === 0 ? 6 : dow - 1; // shift so Mon=0 … Sun=6
+  };
+
+  // 4) Accumulate each lesson’s duration into its completion day
+  for (const p of progresses) {
+    if (!p.completed_at || p.lessons.duration == null) continue;
+    const idx = getDayIndex(p.completed_at);
+    dailySeconds[idx] += p.lessons.duration;
   }
 
-  /**
-   * Get quiz grade distribution data
-   * @param userId The user ID
-   * @returns Grade distribution data
-   */
+  // 5) Return durations in **whole minutes** (no decimals)
+const dailyMinutes = dailySeconds.map(sec => Math.floor(sec / 60));
+
+
+  return { labels: dayNames, values: dailyMinutes };
+}
+
+
+
 export  async function getGradeDistribution(userId: number) {
     try {
       // Get all quiz attempts for the user

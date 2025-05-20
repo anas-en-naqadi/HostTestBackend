@@ -29,41 +29,29 @@ export const listNotifications = async (
     return cached;
   }
 
-  // 2) Cache miss → fetch from DB
-  console.log('Cache miss: querying notifications for user', userId);
   const raw = await prisma.notifications.findMany({
-    where: { user_id: userId },
+    where: { user_id: userId,is_read:false },
     select: {
       id: true,
-      user_id: true,
       title: true,
       type: true,
       content: true,
       metadata: true,
-      is_read: true,
       created_at: true,
-      read_at: true,
-      users: {
-        select: {
-          id: true,
-          full_name: true,
-        },
-      },
+      is_read:true,
     },
     orderBy: { created_at: 'desc' },
   });
 
-  const notifications: NotificationResponse[] = raw.map(n => ({
-    id: n.id,
-    full_name: n.users.full_name,
-    title: n.title,
-    type: n.type,
-    content: n.content ?? undefined,
-    metadata: n.metadata ?? undefined,
-    is_read: n.is_read ?? false,
-    created_at: n.created_at!,
-    read_at: n.read_at ?? undefined,
+  const notifications: NotificationResponse[] = raw.map(r => ({
+    id:         r.id,
+    title:      r.title,
+    type:       r.type,
+    content:    r.content!,      // assert non-null
+    metadata:   r.metadata!,     // assert non-null
+    created_at: r.created_at!,   // assert non-null
   }));
+
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 

@@ -3,6 +3,7 @@ import { Response, NextFunction, Request } from "express";
 import { deleteNote } from "../../services/notes/remove.service";
 import { AppError } from "../../middleware/error.middleware";
 import { errorResponse, successResponse } from "../../utils/api.utils";
+import { logActivity } from "../../utils/activity_log.utils";
 
 export const removeNoteController = async (
   req: Request,
@@ -24,6 +25,13 @@ export const removeNoteController = async (
     }
 
     await deleteNote(userId, id);
+
+    logActivity(
+      userId,
+      "NOTE_DELETE",
+      `${user.full_name} (ID ${userId}) deleted note ID ${id}`,
+      req.ip
+    ).catch(console.error);
 
     successResponse(res,null);
   } catch (err) {

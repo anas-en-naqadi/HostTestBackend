@@ -17,11 +17,12 @@ export class LoginController {
 
       // Generate refresh token
       const refreshToken = result.refreshToken; // Assuming you are getting this from the login service
-
+console.log("refresh",refreshToken);
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
+        path: '/', // Set to root path so it's sent with all API requests
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 

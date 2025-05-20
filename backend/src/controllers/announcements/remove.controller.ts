@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { deleteAnnouncement } from '../../services/announcements/remove.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const removeAnnouncementController = async (
   req: Request,
@@ -28,6 +29,15 @@ export const removeAnnouncementController = async (
     }
 
     await deleteAnnouncement(userId, id);
+
+    logActivity(
+      userId,
+      'ANNOUNCEMENT_DELETED',
+      `${req.user!.full_name} deleted announcement ID ${id}`,
+      req.ip
+    ).catch(console.error);
+
+    
     res.status(200).json({ 
       success: true,
       message: 'Announcement deleted successfully',

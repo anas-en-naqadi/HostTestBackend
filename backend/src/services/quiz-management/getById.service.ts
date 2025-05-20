@@ -1,12 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import redis from "../../config/redis";
+
 
 const prisma = new PrismaClient();
 
 export const getQuizById = async (userId: number, quizId: number) => {
-  const cacheKey = `quiz:${quizId}`;
-  const cached = await redis.get(cacheKey);
-  if (cached) return JSON.parse(cached);
+  
 
   const quiz = await prisma.quizzes.findUnique({
     where: { id: quizId },
@@ -20,6 +18,5 @@ export const getQuizById = async (userId: number, quizId: number) => {
     throw new Error('Unauthorized: You can only view your own quizzes unless you are an admin');
   }
 
-  await redis.set(cacheKey, JSON.stringify(quiz), 'EX', 3600);
   return quiz;
 };

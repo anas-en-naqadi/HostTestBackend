@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { getWishlists } from '../../services/wishlists/list.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const listWishlistsController = async (
   req: Request,
@@ -21,7 +22,14 @@ export const listWishlistsController = async (
 
     const userId = user.id;
     const paginatedWishlists = await getWishlists(userId, page, limit);
-    
+
+    await logActivity(
+      userId,
+      'WISHLIST_LIST',
+      `${user.full_name} viewed wishlist (page ${paginatedWishlists.currentPage}, limit ${limit})`,
+      req.ip
+    ).catch(console.error);
+
     res.status(200).json({ 
       success: true,
       message: 'Wishlist retrieved successfully',

@@ -2,6 +2,7 @@ import { PrismaClient, lesson_progress } from '@prisma/client';
 import { CACHE_KEYS, deleteFromCache, generateCacheKey } from '../../utils/cache.utils';
 import redis from '../../config/redis';
 import { ClearDashboardCache } from '../../utils/clear_cache.utils';
+import { sendNotification } from '../../utils/notification.utils';
 const prisma = new PrismaClient();
 
 export const createLessonProgress = async (
@@ -37,6 +38,12 @@ export const createLessonProgress = async (
     },
     select: {
       id: true,
+      slug:true,
+      title:true,
+      thumbnail_url:true,
+      user:{
+        select:{id:true}
+      },
       modules: {
         select: {
           id: true,
@@ -74,7 +81,8 @@ export const createLessonProgress = async (
     Math.round(((completedLessons + 1) / totalLessons) * 100),
     100
   );
-console.log("completed",completed_at)
+
+
   // Create the lesson progress
   const progress = await prisma.lesson_progress.create({
     data: {
@@ -104,11 +112,12 @@ console.log("completed",completed_at)
   };
 
   // Update the enrollment
-  await prisma.enrollments.update({
+ const updatedEnrollment = await prisma.enrollments.update({
     where: {
       user_id_course_id: { user_id: userId, course_id: course.id },
     },
-    data: updateData
+    data: updateData,
+    select:{users:{select:{id:true,full_name:true}}}
   });
 
   await deleteFromCache(cacheKey);
@@ -128,7 +137,17 @@ ClearDashboardCache(userId);
       }
     }
   });
-
+ 
   if (!createdProgress) throw new Error('Failed to create lesson progress');
+  if(newProgressPercent===100){
+    const notificationDto = {
+       title: "Course Completed",
+       user_id: course.user.id,
+       type: "ENROLLMENT",
+       content: `${updatedEnrollment.users?.full_name} has completed your course <b>${course.title}</b>`,
+       metadata: {thumbnail_url:course.thumbnail_url},
+     };
+     await sendNotification(notificationDto,userId, "intern");
+}
   return createdProgress;
 };

@@ -3,6 +3,7 @@ import { Response, NextFunction, Request } from 'express';
 import { updateNote } from '../../services/notes/update.service';
 import { AppError } from '../../middleware/error.middleware';
 import { errorResponse, successResponse } from '../../utils/api.utils';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const updateNoteController = async (
   req: Request,
@@ -33,6 +34,13 @@ export const updateNoteController = async (
 
 
     const note = await updateNote(userId, id, content);
+
+    logActivity(
+      userId,
+      'NOTE_UPDATE',
+      `${user.full_name} (ID ${userId}) updated note ID ${id}: "${content.slice(0, 30)}…"`,
+      req.ip
+    ).catch(console.error);
 
     successResponse(res,note);
   } catch (err) {

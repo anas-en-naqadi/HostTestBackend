@@ -1,13 +1,11 @@
 export interface NotificationResponse {
     id: number;
-    full_name: string;
     title: string;
     type: string;
-    content?: string;
-    metadata?: any;
-    is_read: boolean;
+    content: string;
+    metadata: any;
+    is_read?:boolean;
     created_at: Date;
-    read_at?: Date;
   }
   
   export interface ApiResponse<T> {

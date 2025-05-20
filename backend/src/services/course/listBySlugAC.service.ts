@@ -8,13 +8,18 @@ import {
   setInCache,
 } from "../../utils/cache.utils";
 
-export const getCourseBySlugAC = async ({slug,userId}:{slug:string,userId:number}): Promise<any> => {
+export const getCourseBySlugAC = async ({
+  slug,
+  userId,
+}: {
+  slug: string;
+  userId: number;
+}): Promise<any> => {
   const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${slug}`);
 
   // Check cache
   const cached = await getFromCache<CourseResponse>(cacheKey);
   if (cached) return cached;
-
 
   const course = await prisma.courses.findUnique({
     where: { slug },
@@ -30,9 +35,9 @@ export const getCourseBySlugAC = async ({slug,userId}:{slug:string,userId:number
       intro_video_url: true,
       what_you_will_learn: true,
       course_requirements: true,
-      wishlists:{
-        where:{
-          user_id:userId
+      wishlists: {
+        where: {
+          user_id: userId,
         },
         select: {
           user_id: true,
@@ -44,36 +49,40 @@ export const getCourseBySlugAC = async ({slug,userId}:{slug:string,userId:number
           name: true,
         },
       },
-  
-      instructors: {
+
+      user: {
         select: {
           id: true,
-          description: true,
-          specialization: true,
-          users: {
+          full_name: true,
+          instructors: {
             select: {
               id: true,
-              full_name: true,
+              description: true,
+              specialization: true,
             },
           },
+
           courses: {
-            orderBy:{
-              created_at:"desc"
+            orderBy: {
+              created_at: "desc",
             },
             select: {
               id: true,
               title: true,
               thumbnail_url: true,
               total_duration: true,
-              slug:true,
+              slug: true,
               difficulty: true,
-              instructors: {
+              user: {
                 select: {
-                  users: {
-                    select: {
-                      full_name: true,
-                    },
-                  },
+                  full_name: true,
+                  instructors:{
+                    select:{
+                      id:true,
+                      description:true,
+                      specialization:true
+                    }
+                  }
                 },
               },
               wishlists: {
@@ -88,30 +97,30 @@ export const getCourseBySlugAC = async ({slug,userId}:{slug:string,userId:number
           },
         },
       },
-  
+
       _count: {
         select: {
           enrollments: true,
         },
       },
-      enrollments:{
-        where:{
-          user_id:userId
+      enrollments: {
+        where: {
+          user_id: userId,
         },
-        select:{
-          user_id:true
-        }
+        select: {
+          user_id: true,
+        },
       },
-  
+
       modules: {
-        orderBy: { order_position: 'asc' },
+        orderBy: { order_position: "asc" },
         select: {
           id: true,
           title: true,
           duration: true,
-          order_position:true,
+          order_position: true,
           lessons: {
-            orderBy: { order_position: 'asc' },
+            orderBy: { order_position: "asc" },
             select: {
               id: true,
               title: true,
@@ -125,14 +134,11 @@ export const getCourseBySlugAC = async ({slug,userId}:{slug:string,userId:number
     },
   });
 
- 
+  if (!course) {
+    throw new AppError(404, "Course Not Found");
+  }
 
-    if (!course) {
-        throw new AppError(404, 'Course Not Found');
-    }
+  await setInCache(cacheKey, course);
 
-    await setInCache(cacheKey, course);
-
-    return course;
-
+  return course;
 };

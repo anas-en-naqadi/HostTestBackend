@@ -21,7 +21,7 @@ export class LogoutService {
       // Update last_login to null
       await prisma.users.update({
         where: { id: userId },
-        data: { last_login: null }
+        data: { last_login: null,is_online:false }
       });
 
     } catch (error) {

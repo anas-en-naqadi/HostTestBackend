@@ -2,7 +2,6 @@
 
 import { PrismaClient, Prisma } from '@prisma/client';
 import { AssignPermissionDto } from '../../types/role.types';
-import { clearCacheByPrefix, CACHE_KEYS } from '../../utils/cache.utils';
 import { AppError } from '../../middleware/error.middleware';
 
 const prisma = new PrismaClient();
@@ -31,7 +30,7 @@ export const revokePermission = async (dto: AssignPermissionDto[]): Promise<void
       });
     }
 
-    await clearCacheByPrefix(CACHE_KEYS.ROLES);
+
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       throw new AppError(409, 'Permission already assigned to this role');

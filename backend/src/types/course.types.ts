@@ -14,7 +14,6 @@ export interface CreateLessonDto {
   lesson_text?: string;
   duration: number;
   quiz_id?: number;
-  module_id: number;
   order_position: number;
 }
 
@@ -39,6 +38,7 @@ export interface CreateCourseDto {
   intro_video_url: string;
   difficulty: course_difficulty;
   subtitle?: string;
+  is_published?: boolean;
   modules: CreateModuleDto[];
 }
 

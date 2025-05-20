@@ -2,6 +2,7 @@ import { Response, NextFunction, Request } from "express";
 import { createEnrollment } from "../../services/enrollments/create.service";
 import { AppError } from "../../middleware/error.middleware";
 import { errorResponse, successResponse } from "../../utils/api.utils";
+import { logActivity } from "../../utils/activity_log.utils";
 export const postEnrollmentController = async (
   req: Request,
   res: Response,
@@ -27,6 +28,13 @@ export const postEnrollmentController = async (
     }
 
     const enrollment = await createEnrollment(userId, Number(courseId));
+
+    logActivity(
+      userId,
+      'COURSE_ENROLL',
+      `${user.full_name} Enrolled in course ID ${courseId}`,
+      req.ip
+    ).catch(console.error);
 
     successResponse(res, enrollment, "Enrollment created successfully");
   } catch (err) {

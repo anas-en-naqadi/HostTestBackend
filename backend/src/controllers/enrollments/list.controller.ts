@@ -3,6 +3,7 @@ import { Response, NextFunction, Request } from 'express';
 import { getEnrollments } from '../../services/enrollments/list.service';
 import { AppError } from '../../middleware/error.middleware';
 import { EnrollmentWithCourse } from 'types/enrollment.types';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const getEnrollmentsController = async (
   req: Request,
@@ -32,7 +33,7 @@ export const getEnrollmentsController = async (
       if (!e.courses || !e.courses.modules) {
         return {
           courseTitle: e.courses?.title || 'Unknown Course',
-          instructorName: e.courses?.instructors?.users?.full_name || 'Unknown Instructor',
+          instructorName: e.courses?.user?.full_name || 'Unknown Instructor',
           progressPercent: 0,
           courseThumbnail: e.courses?.thumbnail_url || '',
           completedLessons: 0,
@@ -70,7 +71,7 @@ export const getEnrollmentsController = async (
           
       return {
         courseTitle: e.courses.title || 'Unknown Course',
-        instructorName: e.courses.instructors?.users?.full_name || 'Unknown Instructor',
+        instructorName: e.courses?.user?.full_name || 'Unknown Instructor',
         progressPercent,
         courseThumbnail: e.courses.thumbnail_url || '',
         completedLessons,
@@ -79,6 +80,14 @@ export const getEnrollmentsController = async (
         courseSubTitle: e.courses.subtitle || ''
       };
     });
+
+    await logActivity(
+      userId,
+      'ENROLLMENT_LIST_VIEW',
+      `${user.full_name} viewed their enrollments list (page ${currentPage}, limit ${limit})`,
+      req.ip
+    ).catch(console.error);
+
 
     res.status(200).json({
       success: true,

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AppError } from '../../middleware/error.middleware';
 import { deleteQuiz, deleteQuestion, deleteOption } from '../../services/quiz-management/remove.service';
 import { AuthRequest } from '../../types/quiz.types';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const deleteQuizController = async (req: AuthRequest, res: Response) => {
   try {
@@ -12,8 +13,15 @@ export const deleteQuizController = async (req: AuthRequest, res: Response) => {
 
     const quizId = parseInt(req.params.id, 10);
     await deleteQuiz(user.id, quizId);
+    
+    logActivity(
+      user.id,
+      'QUIZ_DELETED',
+      `${user.full_name} deleted quiz ID ${quizId}`,
+      req.ip
+    ).catch(console.error);
+    
     res.status(200).json({success: true , message: 'Quiz deleted successfully' });
-    // res.status(204).send();
   } catch (error) {
     if (error instanceof AppError) {
       res.status(error.statusCode).json({ message: error.message });

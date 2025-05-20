@@ -1,8 +1,9 @@
-import { PrismaClient, announcements } from '@prisma/client';
-import redis from '../../config/redis';
+import { PrismaClient, announcements } from "@prisma/client";
+import { sendNotification } from "../../utils/notification.utils";
+import { CACHE_KEYS, deleteFromCache, generateCacheKey } from "../../utils/cache.utils";
 
 const prisma = new PrismaClient();
-const getAnnouncementsCacheKey = (userId: number) => `announcements:${userId}`;
+
 
 export const createAnnouncement = async (
   userId: number,
@@ -10,11 +11,15 @@ export const createAnnouncement = async (
 ): Promise<announcements> => {
   const course = await prisma.courses.findUnique({
     where: { id: data.courseId },
-    include: { instructors: true },
+    select: { user: true,slug:true,thumbnail_url:true,title:true },
   });
-  if (!course || course.instructors?.user_id !== userId) {
-    throw new Error('Course not found or user is not the instructor');
+  if (!course || course.user?.id !== userId) {
+    throw new Error("Course not found or user is not the instructor");
   }
+
+  const content = data.content || "";
+  
+  console.log("data content :",content);
 
   const announcement = await prisma.announcements.create({
     data: {
@@ -25,16 +30,24 @@ export const createAnnouncement = async (
     },
   });
 
-  // Invalidate cache for enrolled users
-  const enrolledUsers = await prisma.enrollments.findMany({
-    where: { course_id: data.courseId },
-    select: { user_id: true },
-  });
-  for (const { user_id } of enrolledUsers) {
-    await redis.del(getAnnouncementsCacheKey(user_id));
-  }
-  // Invalidate cache for the instructor
-  await redis.del(getAnnouncementsCacheKey(userId));
+ await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE,`learn-${course.slug}`));
+  await sendNotification(
+    {
+      title: "New Announcement",
+      user_id: userId,
+      type: "ANNOUNCEMENTS",
+      content: `${course.user?.full_name} posted a new announcement on the course <b>${course.title}</b>`,
+      metadata: {
+        courseId: data.courseId,
+        slug: course.slug,
+        thumbnail_url: course.thumbnail_url,
+      },
+    },
+    userId,
+    "instructor"
+  );
+  
+  
 
   return announcement;
 };

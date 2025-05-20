@@ -3,6 +3,7 @@ import { updateCategory } from '../../services/category/update.service';
 import { successResponse, errorResponse } from '../../utils/api.utils';
 import { AppError } from '../../middleware/error.middleware';
 import { ApiResponse, CategoryResponse } from '../../types/category.types';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const updateCategoryController = async (
   req: Request,
@@ -13,6 +14,16 @@ export const updateCategoryController = async (
   
     const { name } = req.body;
     const updated = await updateCategory(slug, { name });
+
+    const user = req.user;
+
+    logActivity(
+      user!.id,
+      'CATEGORY_UPDATED',
+      `${user!.full_name} updated category "${updated.name}" (ID: ${updated.id})`,
+      req.ip
+    ).catch(console.error);
+
     successResponse(res, updated, 'Category updated successfully');
   } catch (err) {
     if (err instanceof AppError) {
