@@ -2,8 +2,9 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "app.ts",
-  "scripts": {
-    "start": "node src/server.ts",
+ "scripts": {
+    "start": "node dist/server.js",
+  "build": "tsc",
     "dev": "nodemon src/server.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
