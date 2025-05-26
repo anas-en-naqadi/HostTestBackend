@@ -18,7 +18,7 @@ export const getFullUrl = (relativePath: string): string => {
   }
   
   // Get server URL from environment or use default
-  const serverUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+  const serverUrl = process.env.SERVER_URL;
   
   // Ensure proper formatting between server URL and path
   if (relativePath.startsWith('/')) {
@@ -47,7 +47,7 @@ export const formatThumbnailUrl = (thumbnailPath: string): string => {
     const filename = filenameParts[filenameParts.length - 1];
     
     // Get server URL from environment or use default (same as in file.utils.ts)
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+    const backendUrl = process.env.SERVER_URL;
     return `${backendUrl}/uploads/thumbnails/${filename}`;
   }
   

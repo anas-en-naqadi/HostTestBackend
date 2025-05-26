@@ -25,6 +25,7 @@ export const getInstructorPopularCourses = async (
     select: {
       id: true,
       title: true,
+      slug: true,
       thumbnail_url: true,
       _count: {
         select: {
@@ -42,6 +43,7 @@ export const getInstructorPopularCourses = async (
 
   const formattedCourses: PopularCourse[] = popularCourses.map(course => ({
     id: course.id.toString(),
+    slug: course.slug,
     thumbnail: course.thumbnail_url,
     title: course.title,
     participants: course._count.enrollments

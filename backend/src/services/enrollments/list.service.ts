@@ -33,6 +33,9 @@ export const getEnrollments = async (
   // Get paginated data
   const enrollments = await prisma.enrollments.findMany({
     where: { user_id: userId },
+    orderBy:{
+      enrolled_at:'desc'
+    },
     include: {
       courses: {
         select: {

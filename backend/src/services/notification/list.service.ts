@@ -30,7 +30,7 @@ export const listNotifications = async (
   }
 
   const raw = await prisma.notifications.findMany({
-    where: { user_id: userId,is_read:false },
+    where: { user_id: userId },
     select: {
       id: true,
       title: true,

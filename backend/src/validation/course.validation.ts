@@ -4,38 +4,33 @@ import { z } from "zod";
 const lessonContentTypeEnum = z.enum(["text", "video", "quiz"], { required_error: "Lesson content type is required" });
 const courseDifficultyEnum = z.enum(["beginner", "intermediate", "advanced", "allLevel"], { required_error: "Course difficulty is required" });
 
-// Function to validate video URLs
-const isValidVideoUrl = (url: string) => {
-  if (!url) return false;
-  
-  try {
-    // Check basic URL validity
-    const parsedUrl = new URL(url);
-    
-    // Supported video platforms
-    const supportedDomains = [
-      'youtube.com', 'youtu.be', // YouTube
-      'vimeo.com', // Vimeo
-      'dailymotion.com', // Dailymotion
-      'facebook.com', 'fb.watch', // Facebook Video
-      'twitch.tv', // Twitch
-      'wistia.com', // Wistia
-      'loom.com', // Loom
-      'drive.google.com', // Google Drive
-      'player.vimeo.com',
-      'fast.wistia.net',
-      'player.twitch.tv'
-    ];
-    
-    // Check if URL is from a supported video platform
-    return supportedDomains.some(domain => 
-      parsedUrl.hostname === domain || 
-      parsedUrl.hostname.endsWith('.' + domain)
-    );
-  } catch (_) {
+// Function to validate URLs accepted by react-plyr / Plyr
+ const isValidVideoUrl = (url: string): boolean => {
+  if (typeof url !== 'string' || !url.trim()) {
     return false;
   }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    // Not a valid URL
+    return false;
+  }
+
+  // Only http(s) URLs
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return false;
+  }
+
+  // Allowed video file extensions
+  const videoExts = ['.mp4', '.webm', '.ogg', '.mov', '.mkv'];
+  const path = parsed.pathname.toLowerCase();
+
+  return videoExts.some(ext => path.endsWith(ext));
 };
+
+
 
 // Conditional validation for lesson content
 export const lessonSchema = z.object({
@@ -44,7 +39,7 @@ export const lessonSchema = z.object({
   content_type: lessonContentTypeEnum,
   video_url: z.string().optional().refine(
     (url) => !url || isValidVideoUrl(url), 
-    { message: "Video URL must be from a supported platform (YouTube, Vimeo, etc.)" }
+    { message: "Video URL must be a valid video file URL (.mp4, .webm, .ogg, .mov, .mkv)" }
   ),
   lesson_text: z.string().optional(),
   quiz_id: z.number().int().positive().nullable().optional(),
@@ -96,7 +91,7 @@ export const createCourseSchema = z.object({
   slug: z.string({ required_error: "Slug is required" }).min(1, "Slug is required"),
   intro_video_url: z.string().optional().refine(
     (url) => !url || isValidVideoUrl(url),
-    { message: "Intro video URL must be from a supported platform (YouTube, Vimeo, etc.)" }
+    { message: "Intro video URL must be a valid video file URL (.mp4, .webm, .ogg, .mov, .mkv)" }
   ),
   difficulty: courseDifficultyEnum,
   is_published: z.boolean().optional().default(false),

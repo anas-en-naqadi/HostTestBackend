@@ -76,17 +76,15 @@ export class LoginService {
 
       console.log('User found:', { id: user.id, email: user.email, status: user.status });
 
-      // Check if user is active
-      if (user.status !== user_status.active) {
-        console.log('User account is not active:', user.status);
-        throw new AppError(400, 'Account is not active');
-      }
 
-      // Check if email is verified
+
       if (!user.email_verified) {
-        console.log('User email not verified:', user.email);
-        throw new AppError(400, 'Email not verified. Please check your email for verification link.');
+        throw new AppError(403, 'Email not verified. Please check your email for verification link.');
       }
+      if(user.status !== user_status.active){
+        throw new AppError(400, 'Account is not active. Please contact support.');
+      }
+  
 
       // Verify password
       const isPasswordValid = await this.comparePasswords(data.password, user.password_hash);
@@ -136,7 +134,7 @@ export class LoginService {
           email: user.email,
           role: user.roles.name,
           status: user.status,
-          email_verified: false,
+          email_verified: user.email_verified,
           last_login: user.last_login || undefined,
         },
         token,

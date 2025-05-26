@@ -3,7 +3,7 @@ import sanitizeHtml from 'sanitize-html';
 
 export const sanitizeRequest = (req: Request, res: Response, next: NextFunction) => {
   if (req.body) {
-    if (req.path.includes('/notes') || req.path.includes('/announcements')) {
+    if (req.path.includes('/notes') || req.path.includes('/announcements') || req.path.includes('/courses')) {
       return next();
     }
     Object.keys(req.body).forEach(key => {

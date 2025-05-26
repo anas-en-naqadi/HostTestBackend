@@ -41,13 +41,10 @@ import instructorDashboardRoutes from './routes/instructor_dashboard.routes'
 loadEnv();
 const app = express();
 
-// Trust proxy - needed when behind a reverse proxy (Heroku, AWS ELB, Nginx, etc)
-app.set('trust proxy', true);
-
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "https://acade-me-frontend-test.vercel.app",
+  origin: process.env.FRONTEND_URL ,
   credentials: true,
   methods: ['GET','POST','PUT','DELETE'],
   allowedHeaders: ['Content-Type','Authorization']
@@ -74,7 +71,7 @@ setupStaticMiddleware(app);
 // Rate limiting (auth endpoints)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  max: 20,
   message: 'Too many requests from this IP, please try again later',
 });
 app.use('/api/auth/login', authLimiter);

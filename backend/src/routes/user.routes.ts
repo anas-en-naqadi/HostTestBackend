@@ -15,7 +15,7 @@ import { UserRole } from '../types/user.types';
 
 const router = Router();
 router.use(authenticate);
-router.put('/profile/update/:id', hasRole([UserRole.INSTRUCTOR,UserRole.INTERN,UserRole.ADMIN]), hasPermission('user:update'), validate(updateProfileSchema,'body'), updateProfileController);
+router.put('/profile/update/:id', hasRole([UserRole.INSTRUCTOR,UserRole.INTERN,UserRole.ADMIN]), hasPermission('profile:update'), validate(updateProfileSchema,'body'), updateProfileController);
 router.get('/:id', hasRole([UserRole.INSTRUCTOR,UserRole.INTERN,UserRole.ADMIN]), hasPermission('user:read'), getUserByIdController);
 router.put('/:id', hasRole(UserRole.ADMIN), hasPermission('user:update'), validate(UserUpdateSchema,'body'), updateUserController);
 router.use(hasRole(UserRole.ADMIN));

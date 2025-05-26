@@ -30,6 +30,7 @@ export const getCourseBySlugAC = async ({
       subtitle: true,
       description: true,
       total_duration: true,
+      is_published:true,
       difficulty: true,
       created_at: true,
       intro_video_url: true,

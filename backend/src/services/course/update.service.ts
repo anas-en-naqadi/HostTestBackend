@@ -185,6 +185,58 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
             });
             if (!existingModule) throw new AppError(404, "Module not found");
             
+            // Check if the module's order position has changed
+            if (existingModule.order_position !== module.order_position) {
+              // Temporarily move the module to a very high order position to avoid conflicts
+              // This approach avoids the unique constraint violation during reordering
+              const tempPosition = 999999;
+              await tx.modules.update({
+                where: { id: module.id },
+                data: { order_position: tempPosition }
+              });
+              
+              // Get all other modules for this course, sorted by order position
+              const allOtherModules = await tx.modules.findMany({
+                where: {
+                  course_id: updated.id,
+                  id: { not: module.id } // Exclude the current module
+                },
+                orderBy: { order_position: 'asc' }
+              });
+              
+              // Determine the new positions for all modules
+              let newPositions = [];
+              let currentPosition = 1;
+              
+              // Process modules before the target position
+              for (let i = 0; i < allOtherModules.length; i++) {
+                if (currentPosition === module.order_position) {
+                  // Skip this position for now as it's reserved for our module
+                  currentPosition++;
+                }
+                
+                if (allOtherModules[i].order_position !== currentPosition) {
+                  newPositions.push({
+                    id: allOtherModules[i].id,
+                    newPosition: currentPosition
+                  });
+                }
+                
+                currentPosition++;
+              }
+              
+              // Update all modules that need position changes
+              for (const item of newPositions) {
+                await tx.modules.update({
+                  where: { id: item.id },
+                  data: { order_position: item.newPosition }
+                });
+              }
+              
+              // Finally, set our module to the desired position
+              // We'll update this later in the existing update call
+            }
+            
             // Update existing module
             await tx.modules.update({
               where: { id: module.id },
@@ -224,6 +276,57 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
                 if (lesson.id) {
                   const existingLesson = await tx.lessons.findUnique({ where: { id: lesson.id } });
                   if (!existingLesson) throw new AppError(404, "Lesson not found");
+                  
+                  // Check if the lesson's order position has changed
+                  if (existingLesson.order_position !== lesson.order_position) {
+                    // Temporarily move the lesson to a very high order position to avoid conflicts
+                    const tempPosition = 999999;
+                    await tx.lessons.update({
+                      where: { id: lesson.id },
+                      data: { order_position: tempPosition }
+                    });
+                    
+                    // Get all other lessons for this module, sorted by order position
+                    const allOtherLessons = await tx.lessons.findMany({
+                      where: {
+                        module_id: existingModule.id,
+                        id: { not: lesson.id } // Exclude the current lesson
+                      },
+                      orderBy: { order_position: 'asc' }
+                    });
+                    
+                    // Determine the new positions for all lessons
+                    let newPositions = [];
+                    let currentPosition = 1;
+                    
+                    // Process lessons before the target position
+                    for (let i = 0; i < allOtherLessons.length; i++) {
+                      if (currentPosition === lesson.order_position) {
+                        // Skip this position for now as it's reserved for our lesson
+                        currentPosition++;
+                      }
+                      
+                      if (allOtherLessons[i].order_position !== currentPosition) {
+                        newPositions.push({
+                          id: allOtherLessons[i].id,
+                          newPosition: currentPosition
+                        });
+                      }
+                      
+                      currentPosition++;
+                    }
+                    
+                    // Update all lessons that need position changes
+                    for (const item of newPositions) {
+                      await tx.lessons.update({
+                        where: { id: item.id },
+                        data: { order_position: item.newPosition }
+                      });
+                    }
+                    
+                    // The actual lesson update with the desired position will happen in the next update call
+                  }
+                  
                   // Update existing lesson
                   await tx.lessons.update({
                     where: { id: lesson.id },
@@ -238,7 +341,41 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
                     },
                   });
                 } else {
-                  // Create new lesson
+                  // Get all existing lessons for this module, sorted by order position
+                  const existingLessons = await tx.lessons.findMany({
+                    where: {
+                      module_id: existingModule.id
+                    },
+                    orderBy: { order_position: 'asc' }
+                  });
+                  
+                  // Determine if we need to adjust positions
+                  let targetPosition = lesson.order_position;
+                  let needToAdjust = false;
+                  
+                  // Check if the position is already taken
+                  for (const existingLesson of existingLessons) {
+                    if (existingLesson.order_position === targetPosition) {
+                      needToAdjust = true;
+                      break;
+                    }
+                  }
+                  
+                  // If we need to adjust positions, do it one by one to avoid conflicts
+                  if (needToAdjust) {
+                    // Start from the highest position and move upward
+                    for (let i = existingLessons.length - 1; i >= 0; i--) {
+                      const currentLesson = existingLessons[i];
+                      if (currentLesson.order_position >= targetPosition) {
+                        await tx.lessons.update({
+                          where: { id: currentLesson.id },
+                          data: { order_position: currentLesson.order_position + 1 }
+                        });
+                      }
+                    }
+                  }
+                  
+                  // Create new lesson with the target position
                   await tx.lessons.create({
                     data: {
                       title: lesson.title,
@@ -247,7 +384,7 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
                       lesson_text: lesson.content_type === lesson_content_type.TEXT ? lesson.lesson_text : null,
                       quiz_id: lesson.content_type === lesson_content_type.QUIZ ? lesson.quiz_id : null,
                       duration: lesson.duration,
-                      order_position: lesson.order_position,
+                      order_position: targetPosition,
                       module_id: existingModule.id,  // Associate lesson with the correct module
                     },
                   });
@@ -268,7 +405,38 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
       
             // Create lessons for the new module if they exist
             if (module.lessons && Array.isArray(module.lessons) && module.lessons.length > 0) {
-              for (const lesson of module.lessons) {
+              // First, sort lessons by order_position to ensure we process them in order
+              const sortedLessons = [...module.lessons].sort((a, b) => a.order_position - b.order_position);
+              
+              // Create a map to track the final positions
+              const finalPositions = new Map<number, number>();
+              let nextAvailablePosition = 1;
+              
+              // First pass: determine the final position for each lesson
+              for (const lesson of sortedLessons) {
+                const requestedPosition = lesson.order_position || nextAvailablePosition;
+                
+                // Find the next available position if this one is taken
+                while (finalPositions.has(nextAvailablePosition)) {
+                  nextAvailablePosition++;
+                }
+                
+                // If the requested position is available, use it
+                if (!finalPositions.has(requestedPosition)) {
+                  finalPositions.set(requestedPosition, requestedPosition);
+                  nextAvailablePosition = Math.max(nextAvailablePosition, requestedPosition + 1);
+                } else {
+                  // Otherwise use the next available position
+                  finalPositions.set(requestedPosition, nextAvailablePosition);
+                  nextAvailablePosition++;
+                }
+              }
+              
+              // Second pass: create each lesson with its final position
+              for (const lesson of sortedLessons) {
+                const requestedPosition = lesson.order_position || 1;
+                const finalPosition = finalPositions.get(requestedPosition) || requestedPosition;
+                
                 await tx.lessons.create({
                   data: {
                     title: lesson.title,
@@ -277,7 +445,7 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
                     lesson_text: lesson.content_type === lesson_content_type.TEXT ? lesson.lesson_text : null,
                     quiz_id: lesson.content_type === lesson_content_type.QUIZ ? lesson.quiz_id : null,
                     duration: lesson.duration,
-                    order_position: lesson.order_position,
+                    order_position: finalPosition,
                     module_id: createdModule.id,
                   },
                 });

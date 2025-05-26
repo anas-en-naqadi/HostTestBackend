@@ -42,7 +42,7 @@ export const saveThumbnail = (file: Express.Multer.File): string => {
   fs.unlinkSync(file.path);
   
   // Get the backend URL from environment or use default
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+  const backendUrl = process.env.SERVER_URL;
   
   // Return the full URL for the thumbnail
   return `${backendUrl}/uploads/thumbnails/${secureFilename}`;
@@ -55,7 +55,7 @@ export const getThumbnailPath = (thumbnailUrl: string): string => {
   if (!thumbnailUrl) return '';
   
   // Extract the filename from the URL (works with both relative and full URLs)
-  const urlPath = new URL(thumbnailUrl, 'http://localhost').pathname;
+  const urlPath = new URL(thumbnailUrl, process.env.SERVER_URL).pathname;
   const filename = path.basename(urlPath);
   return path.join(THUMBNAILS_DIR, filename);
 };

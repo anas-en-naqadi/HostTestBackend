@@ -3,7 +3,7 @@
 ####################################
 # 1) Builder stage
 ####################################
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 # 1.1 Install ALL deps (incl. dev for tsc & prisma)

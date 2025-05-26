@@ -31,6 +31,7 @@ export const getCourseBySlugACController = async (req: Request, res: Response) =
       description: course.description,
       difficulty: course.difficulty,
       slug:course.slug,
+      isPublished:course.is_published,
       introVideo: course.intro_video_url,
       duration: course.total_duration,
       createdAt: course.created_at,

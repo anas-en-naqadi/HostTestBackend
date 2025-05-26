@@ -50,6 +50,7 @@ export const updateCourseController = async (req: MulterRequest, res: Response, 
     
     successResponse(res, updatedCourse);
   } catch (error) {
+    console.log(error)
     if (error instanceof AppError) {
        errorResponse(res, error.message, error.statusCode, error.errors);
     }

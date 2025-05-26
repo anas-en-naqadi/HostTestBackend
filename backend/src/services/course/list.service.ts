@@ -118,6 +118,7 @@ export const listAllCourses = async (
         user: {
           select: {
             id:true,
+            full_name: true,
             instructors:{
            select:{
              id: true,

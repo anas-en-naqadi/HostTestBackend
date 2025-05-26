@@ -13,6 +13,10 @@
       "description": "Ability to update user information"
     },
     {
+      "name": "profile:update",
+      "description": "Ability to update user profile"
+    },
+    {
       "name": "user:delete",
       "description": "Ability to delete users"
     },

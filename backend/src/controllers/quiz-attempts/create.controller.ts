@@ -44,6 +44,7 @@ export const createQuizAttemptController = async (
       data: attempt 
     });
   } catch (error) {
+    console.log(error)
     if (error instanceof AppError) {
       res.status(error.statusCode).json({ success: false, message: error.message });
     } else {
