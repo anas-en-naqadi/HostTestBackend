@@ -40,6 +40,7 @@ export interface IResetPasswordRequest {
 
 export interface IEmailVerificationRequest {
   token: string;
+  hashedId: string;
 }
 
 export interface IAuthResponse {

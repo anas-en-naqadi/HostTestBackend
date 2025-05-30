@@ -16,6 +16,7 @@ export const getPopularCourses = async (
       id: true,
       title: true,
       thumbnail_url: true,
+      slug:true,
       _count: {
         select: {
           enrollments: true,
@@ -35,6 +36,7 @@ export const getPopularCourses = async (
     id: course.id.toString(),
     thumbnail: course.thumbnail_url,
     title: course.title,
+    slug: course.slug,
     participants: course._count.enrollments,
   }));
 

@@ -1,4 +1,5 @@
 import prisma from "../../config/prisma";
+import { getFromCache, setInCache, generateCacheKey, CACHE_KEYS } from "../../utils/cache.utils";
 
 interface CoursesResponse {
   courses: {
@@ -25,6 +26,17 @@ export const listCoursesByUserId = async (
   role: string
 ): Promise<CoursesResponse> => {
   try {
+    // Generate a unique cache key based on user and role
+    const cacheKey = generateCacheKey(CACHE_KEYS.COURSES, `user-${userId}-${role}`);
+    
+    // Try to get data from cache first
+    const cachedData = await getFromCache<CoursesResponse>(cacheKey);
+    if (cachedData) {
+      console.log(`Retrieved courses for user ${userId} with role ${role} from cache`);
+      return cachedData;
+    }
+    
+    // If not in cache, proceed with database query
 
     const whereConditions: any = {}
     if(role === "instructor") {
@@ -135,9 +147,14 @@ export const listCoursesByUserId = async (
       modules: course.modules
     }));
 
-    return {
+    const result = {
       courses: formatted
     };
+    
+    // Store result in cache (30 minutes TTL for user-specific data)
+    await setInCache(cacheKey, result, 1800);
+    
+    return result;
   } catch (error) {
     console.error("Error fetching courses by user ID:", error);
     throw new Error("Failed to load user courses.");

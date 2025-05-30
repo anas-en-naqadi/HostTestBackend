@@ -16,6 +16,18 @@ if (!fs.existsSync(THUMBNAILS_DIR)) {
   fs.mkdirSync(THUMBNAILS_DIR, { recursive: true });
 }
 
+// Create intro videos directory
+const VIDEOS_DIR = path.join(UPLOADS_DIR, 'intro_videos');
+if (!fs.existsSync(VIDEOS_DIR)) {
+  fs.mkdirSync(VIDEOS_DIR, { recursive: true });
+}
+
+// Create course videos directory (for lesson videos)
+const COURSE_VIDEOS_DIR = path.join(UPLOADS_DIR, 'course_videos');
+if (!fs.existsSync(COURSE_VIDEOS_DIR)) {
+  fs.mkdirSync(COURSE_VIDEOS_DIR, { recursive: true });
+}
+
 /**
  * Generate a secure filename for uploaded files
  * This prevents path traversal attacks and filename collisions
@@ -35,7 +47,45 @@ export const saveThumbnail = (file: Express.Multer.File): string => {
   const secureFilename = generateSecureFilename(file.originalname);
   const destPath = path.join(THUMBNAILS_DIR, secureFilename);
   
-  // Copy the file from temporary upload location to thumbnails directory
+  try {
+    // Copy the file from temporary upload location to thumbnails directory
+    fs.copyFileSync(file.path, destPath);
+    
+    // Try to delete the temporary file, but don't fail if it can't be deleted
+    try {
+      fs.unlinkSync(file.path);
+    } catch (error) {
+      console.warn(`Could not delete temporary file ${file.path}:`, error);
+      // Continue execution even if temp file deletion fails
+    }
+    
+    // Get the backend URL from environment or use default
+    const backendUrl = process.env.SERVER_URL;
+    
+    // Return the full URL for the thumbnail
+    return `${backendUrl}/uploads/thumbnails/${secureFilename}`;
+  } catch (error) {
+    console.error(`Error saving thumbnail ${file.originalname}:`, error);
+    throw new Error(`Failed to save thumbnail: ${(error as Error).message}`);
+  }
+};
+
+/**
+ * Save an uploaded intro video file with a secure filename
+ * Returns the full URL to the saved file
+ * Includes validation for video file types
+ */
+export const saveIntroVideo = (file: Express.Multer.File): string => {
+  // Validate file type (additional security check)
+  const validVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-matroska'];
+  if (!validVideoTypes.includes(file.mimetype)) {
+    throw new Error(`Invalid video file type: ${file.mimetype}. Supported types: mp4, webm, ogg, mov, mkv`);
+  }
+  
+  const secureFilename = generateSecureFilename(file.originalname);
+  const destPath = path.join(VIDEOS_DIR, secureFilename);
+  
+  // Copy the file from temporary upload location to videos directory
   fs.copyFileSync(file.path, destPath);
   
   // Delete the temporary file
@@ -44,8 +94,8 @@ export const saveThumbnail = (file: Express.Multer.File): string => {
   // Get the backend URL from environment or use default
   const backendUrl = process.env.SERVER_URL;
   
-  // Return the full URL for the thumbnail
-  return `${backendUrl}/uploads/thumbnails/${secureFilename}`;
+  // Return the full URL for the video
+  return `${backendUrl}/uploads/intro_videos/${secureFilename}`;
 };
 
 /**
@@ -54,10 +104,74 @@ export const saveThumbnail = (file: Express.Multer.File): string => {
 export const getThumbnailPath = (thumbnailUrl: string): string => {
   if (!thumbnailUrl) return '';
   
-  // Extract the filename from the URL (works with both relative and full URLs)
-  const urlPath = new URL(thumbnailUrl, process.env.SERVER_URL).pathname;
-  const filename = path.basename(urlPath);
-  return path.join(THUMBNAILS_DIR, filename);
+  try {
+    // Extract the filename from the URL (works with both relative and full URLs)
+    const urlPath = new URL(thumbnailUrl, process.env.SERVER_URL).pathname;
+    const filename = path.basename(urlPath);
+    return path.join(THUMBNAILS_DIR, filename);
+  } catch (error) {
+    console.error('Error getting thumbnail path:', error);
+    return '';
+  }
+};
+
+/**
+ * Get the absolute path for an intro video URL
+ */
+export const getVideoPath = (videoUrl: string): string => {
+  if (!videoUrl) return '';
+  
+  try {
+    // Extract the filename from the URL (works with both relative and full URLs)
+    const urlPath = new URL(videoUrl, process.env.SERVER_URL).pathname;
+    const filename = path.basename(urlPath);
+    return path.join(VIDEOS_DIR, filename);
+  } catch (error) {
+    console.error('Error getting video path:', error);
+    return '';
+  }
+};
+
+/**
+ * Check if an intro video file exists
+ */
+export const videoExists = (videoUrl: string): boolean => {
+  if (!videoUrl) return false;
+  
+  try {
+    const videoPath = getVideoPath(videoUrl);
+    return fs.existsSync(videoPath);
+  } catch (error) {
+    console.error('Error checking if video exists:', error);
+    return false;
+  }
+};
+
+/**
+ * Delete an intro video file
+ * @param videoUrl The URL of the intro video to delete
+ * @returns true if deletion was successful, false otherwise
+ */
+export const deleteIntroVideo = (videoUrl: string): boolean => {
+  if (!videoUrl) return false;
+  
+  try {
+    // Get the file path from the URL
+    const videoPath = getVideoPath(videoUrl);
+    
+    // Check if the file exists
+    if (fs.existsSync(videoPath)) {
+      // Delete the file
+      fs.unlinkSync(videoPath);
+      console.log(`Deleted intro video: ${videoPath}`);
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error deleting intro video:', error);
+    return false;
+  }
 };
 
 /**
@@ -89,15 +203,169 @@ export const deleteThumbnail = (thumbnailUrl: string): boolean => {
     
     // Check if the file exists
     if (fs.existsSync(thumbnailPath)) {
+      try {
+        // Try to delete the file with retries
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+          try {
+            fs.unlinkSync(thumbnailPath);
+            console.log(`Deleted thumbnail: ${thumbnailPath}`);
+            return true;
+          } catch (unlinkError) {
+            // If file is busy/locked (EBUSY) or in use by another process (EPERM)
+            if ((unlinkError as NodeJS.ErrnoException).code === 'EBUSY' || 
+                (unlinkError as NodeJS.ErrnoException).code === 'EPERM') {
+              attempts++;
+              if (attempts < maxAttempts) {
+                // Wait a bit before retrying
+                console.log(`Thumbnail file locked, retrying... (${attempts}/${maxAttempts})`);
+                // In a synchronous context, we can't use setTimeout, so just continue
+              } else {
+                console.warn(`Could not delete thumbnail after ${maxAttempts} attempts: ${thumbnailPath}`);
+                // Return true anyway since we don't want to fail the whole operation
+                return true;
+              }
+            } else {
+              // For other errors, rethrow
+              throw unlinkError;
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error deleting thumbnail ${thumbnailPath}:`, error);
+        // Return true anyway to prevent failing the whole operation
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error in deleteThumbnail function:', error);
+  return false;
+}
+};
+
+/**
+ * Ensure a course-specific directory exists for lesson videos
+ * @param courseSlug The slug of the course
+ * @returns The path to the course videos directory
+ */
+export const ensureCourseVideosDir = (courseSlug: string): string => {
+  const courseDir = path.join(COURSE_VIDEOS_DIR, courseSlug);
+  if (!fs.existsSync(courseDir)) {
+    fs.mkdirSync(courseDir, { recursive: true });
+  }
+  return courseDir;
+};
+
+/**
+ * Save an uploaded lesson video file to a course-specific directory
+ * @param file The uploaded video file
+ * @param courseSlug The slug of the course this lesson belongs to
+ * @returns The URL to the saved video file
+ */
+export const saveLessonVideo = (file: Express.Multer.File, courseSlug: string): string => {
+  // Validate file type (additional security check)
+  const validVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-matroska'];
+  if (!validVideoTypes.includes(file.mimetype)) {
+    throw new Error(`Invalid video file type: ${file.mimetype}. Supported types: mp4, webm, ogg, mov, mkv`);
+  }
+  
+  // Ensure the course directory exists
+  const courseDir = ensureCourseVideosDir(courseSlug);
+  
+  // Generate a secure filename
+  const secureFilename = generateSecureFilename(file.originalname);
+  const destPath = path.join(courseDir, secureFilename);
+  
+  try {
+    // Copy the file from temporary upload location to the course videos directory
+    fs.copyFileSync(file.path, destPath);
+    
+    // Try to delete the temporary file
+    try {
+      fs.unlinkSync(file.path);
+    } catch (error) {
+      console.warn(`Could not delete temporary file ${file.path}:`, error);
+      // Continue execution even if temp file deletion fails
+    }
+    
+    // Get the backend URL from environment or use default
+    const backendUrl = process.env.SERVER_URL;
+    
+    // Return the full URL for the video
+    return `${backendUrl}/uploads/course_videos/${courseSlug}/${secureFilename}`;
+  } catch (error) {
+    console.error(`Error saving lesson video ${file.originalname}:`, error);
+    throw new Error(`Failed to save lesson video: ${(error as Error).message}`);
+  }
+};
+
+/**
+ * Get the absolute path for a lesson video URL
+ * @param videoUrl The URL of the lesson video
+ * @returns The absolute path to the video file
+ */
+export const getLessonVideoPath = (videoUrl: string): string => {
+  if (!videoUrl) return '';
+  
+  try {
+    // Extract the filename and course directory from the URL
+    const urlPath = new URL(videoUrl, process.env.SERVER_URL).pathname;
+    // The path will be like /uploads/course_videos/course-slug/filename.mp4
+    const pathParts = urlPath.split('/');
+    const filename = pathParts.pop() || ''; // Get the filename
+    const courseSlug = pathParts.pop() || ''; // Get the course slug
+    
+    return path.join(COURSE_VIDEOS_DIR, courseSlug, filename);
+  } catch (error) {
+    console.error('Error getting lesson video path:', error);
+    return '';
+  }
+};
+
+/**
+ * Check if a lesson video file exists
+ * @param videoUrl The URL of the lesson video
+ * @returns true if the file exists, false otherwise
+ */
+export const lessonVideoExists = (videoUrl: string): boolean => {
+  if (!videoUrl) return false;
+  
+  try {
+    const videoPath = getLessonVideoPath(videoUrl);
+    return fs.existsSync(videoPath);
+  } catch (error) {
+    console.error('Error checking if lesson video exists:', error);
+    return false;
+  }
+};
+
+/**
+ * Delete a lesson video file
+ * @param videoUrl The URL of the lesson video to delete
+ * @returns true if deletion was successful, false otherwise
+ */
+export const deleteLessonVideo = (videoUrl: string): boolean => {
+  if (!videoUrl) return false;
+  
+  try {
+    // Get the file path from the URL
+    const videoPath = getLessonVideoPath(videoUrl);
+    
+    // Check if the file exists
+    if (fs.existsSync(videoPath)) {
       // Delete the file
-      fs.unlinkSync(thumbnailPath);
-      console.log(`Deleted thumbnail: ${thumbnailPath}`);
+      fs.unlinkSync(videoPath);
+      console.log(`Deleted lesson video: ${videoPath}`);
       return true;
     }
     
     return false;
   } catch (error) {
-    console.error('Error deleting thumbnail:', error);
+    console.error('Error deleting lesson video:', error);
     return false;
   }
 };

@@ -74,7 +74,7 @@ export const getCourseBySlug = async (slug: string, userId: number): Promise<any
       },
       enrollments: {
         where: { user_id: userId },
-        select: { user_id: true, last_accessed_lesson_id: true, last_accessed_module_id: true, progress_percent: true },
+        select: { id:true,user_id: true, last_accessed_lesson_id: true, last_accessed_module_id: true, progress_percent: true },
       },
       modules: {
         select: {
@@ -134,7 +134,7 @@ export const getCourseBySlug = async (slug: string, userId: number): Promise<any
                         select: {
                           id: true,
                           text: true,
-                          is_correct: true,
+                          is_correct:true,
                         },
                       },
                     },

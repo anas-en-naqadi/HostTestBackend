@@ -3,6 +3,8 @@ import { Router, Response, NextFunction } from 'express';
 import { authenticate, hasRole, hasPermission } from '../middleware/auth.middleware';
 import { UserRole } from '../types/auth.types';
 import { createQuizController } from '../controllers/quiz-management/create.controller';
+import { validateAnswerController } from '../controllers/quiz-management/validateAnswer.controller';
+import { validateAnswersController } from '../controllers/quiz-management/validateAnswers.controller';
 import { updateQuizController } from '../controllers/quiz-management/update.controller';
 import { deleteQuizController, deleteQuestionController, deleteOptionController } from '../controllers/quiz-management/remove.controller';
 import { listQuizzesController } from '../controllers/quiz-management/list.controller';
@@ -20,5 +22,7 @@ router.delete('/:id', hasPermission('quiz:delete'), deleteQuizController);
 router.delete('/questions/:questionId', hasPermission('quiz:delete'), deleteQuestionController);
 router.delete('/options/:optionId', hasPermission('quiz:delete'), deleteOptionController);
 
+// Quiz answer validation endpoints (for client answer validation)
+router.post('/validate-answers', validateAnswersController);
 
 export default router;

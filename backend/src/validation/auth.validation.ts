@@ -121,6 +121,10 @@ export class AuthValidation {
     if (!data.token) {
       throw new AppError(400, "Verification token is required");
     }
+
+    if (!data.hashedId || typeof data.hashedId !== 'string' || data.hashedId.trim() === '') {
+      throw new AppError(400, 'Valid user ID is required');
+    }
   }
 
   static validateForgotPassword(email: string): void {

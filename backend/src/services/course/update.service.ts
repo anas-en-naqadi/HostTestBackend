@@ -1,9 +1,46 @@
 import prisma from "../../config/prisma";
 import { CreateCourseDto } from "../../types/course.types";
 import { AppError } from "../../middleware/error.middleware";
-import { clearCacheByPrefix, CACHE_KEYS, generateCacheKey, deleteFromCache } from "../../utils/cache.utils";
+import { clearCacheByPrefix, CACHE_KEYS, generateCacheKey, deleteFromCache, deletePatternFromCache } from "../../utils/cache.utils";
 import { formatThumbnailUrl } from "../../utils/url.utils";
 import { lesson_content_type } from "../../types/course.types";
+import { Prisma } from "@prisma/client";
+
+// Helper function to retry a transaction with exponential backoff
+async function retryTransaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>, maxRetries = 3): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await prisma.$transaction(
+        operation,
+        {
+          maxWait: 5000, // 5s max waiting time during the retry process
+          timeout: 30000, // 30s transaction timeout
+          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted
+        }
+      );
+    } catch (error) {
+      lastError = error;
+      console.log(`Transaction attempt ${attempt} failed:`, error);
+      
+      // Only retry on transaction-specific errors
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || 
+          !error.message.includes('Transaction')) {
+        throw error; // Don't retry on non-transaction errors
+      }
+      
+      if (attempt < maxRetries) {
+        // Exponential backoff: wait longer between each retry
+        const delay = Math.min(100 * Math.pow(2, attempt), 2000); // Max 2s delay
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  // If we've exhausted all retries
+  throw lastError;
+}
 export const updateCourse = async (courseSlug: string, courseData: Partial<CreateCourseDto>) => {
   try {
     const existingCourse = await prisma.courses.findUnique({ where: { slug: courseSlug } });
@@ -96,7 +133,7 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
       if (slugTaken) throw new AppError(400, "Course with this slug already exists.");
     }
 
-    const updatedCourse = await prisma.$transaction(async (tx) => {
+    const updatedCourse = await retryTransaction(async (tx) => {
       // Calculate total duration
       // Ensure modules is an array before using reduce
       const modulesArray = Array.isArray(modules) ? modules : [];
@@ -187,54 +224,48 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
             
             // Check if the module's order position has changed
             if (existingModule.order_position !== module.order_position) {
-              // Temporarily move the module to a very high order position to avoid conflicts
-              // This approach avoids the unique constraint violation during reordering
-              const tempPosition = 999999;
-              await tx.modules.update({
-                where: { id: module.id },
-                data: { order_position: tempPosition }
-              });
-              
-              // Get all other modules for this course, sorted by order position
-              const allOtherModules = await tx.modules.findMany({
-                where: {
-                  course_id: updated.id,
-                  id: { not: module.id } // Exclude the current module
-                },
-                orderBy: { order_position: 'asc' }
-              });
-              
-              // Determine the new positions for all modules
-              let newPositions = [];
-              let currentPosition = 1;
-              
-              // Process modules before the target position
-              for (let i = 0; i < allOtherModules.length; i++) {
-                if (currentPosition === module.order_position) {
-                  // Skip this position for now as it's reserved for our module
-                  currentPosition++;
-                }
+              try {
+                // Check if there's already a module with the target position
+                const moduleWithTargetPosition = await tx.modules.findFirst({
+                  where: {
+                    course_id: updated.id,
+                    order_position: module.order_position,
+                    id: { not: module.id } // Exclude the current module
+                  }
+                });
                 
-                if (allOtherModules[i].order_position !== currentPosition) {
-                  newPositions.push({
-                    id: allOtherModules[i].id,
-                    newPosition: currentPosition
+                if (moduleWithTargetPosition) {
+                  // Use a temporary high position to avoid conflicts
+                  const tempPosition = 999999;
+                  
+                  // First move the conflicting module to temp position
+                  await tx.modules.update({
+                    where: { id: moduleWithTargetPosition.id },
+                    data: { order_position: tempPosition }
+                  });
+                  
+                  // Now move our module to the target position
+                  await tx.modules.update({
+                    where: { id: module.id },
+                    data: { order_position: module.order_position }
+                  });
+                  
+                  // Finally move the conflicting module to our original position
+                  await tx.modules.update({
+                    where: { id: moduleWithTargetPosition.id },
+                    data: { order_position: existingModule.order_position }
+                  });
+                } else {
+                  // No conflict, just update the position directly
+                  await tx.modules.update({
+                    where: { id: module.id },
+                    data: { order_position: module.order_position }
                   });
                 }
-                
-                currentPosition++;
+              } catch (error) {
+                console.error("Error updating module position:", error);
+                throw new AppError(400, "Failed to update module order position. Please try a different position.");
               }
-              
-              // Update all modules that need position changes
-              for (const item of newPositions) {
-                await tx.modules.update({
-                  where: { id: item.id },
-                  data: { order_position: item.newPosition }
-                });
-              }
-              
-              // Finally, set our module to the desired position
-              // We'll update this later in the existing update call
             }
             
             // Update existing module
@@ -279,52 +310,48 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
                   
                   // Check if the lesson's order position has changed
                   if (existingLesson.order_position !== lesson.order_position) {
-                    // Temporarily move the lesson to a very high order position to avoid conflicts
-                    const tempPosition = 999999;
-                    await tx.lessons.update({
-                      where: { id: lesson.id },
-                      data: { order_position: tempPosition }
-                    });
-                    
-                    // Get all other lessons for this module, sorted by order position
-                    const allOtherLessons = await tx.lessons.findMany({
-                      where: {
-                        module_id: existingModule.id,
-                        id: { not: lesson.id } // Exclude the current lesson
-                      },
-                      orderBy: { order_position: 'asc' }
-                    });
-                    
-                    // Determine the new positions for all lessons
-                    let newPositions = [];
-                    let currentPosition = 1;
-                    
-                    // Process lessons before the target position
-                    for (let i = 0; i < allOtherLessons.length; i++) {
-                      if (currentPosition === lesson.order_position) {
-                        // Skip this position for now as it's reserved for our lesson
-                        currentPosition++;
-                      }
+                    try {
+                      // Check if there's already a lesson with the target position
+                      const lessonWithTargetPosition = await tx.lessons.findFirst({
+                        where: {
+                          module_id: existingModule.id,
+                          order_position: lesson.order_position,
+                          id: { not: lesson.id } // Exclude the current lesson
+                        }
+                      });
                       
-                      if (allOtherLessons[i].order_position !== currentPosition) {
-                        newPositions.push({
-                          id: allOtherLessons[i].id,
-                          newPosition: currentPosition
+                      if (lessonWithTargetPosition) {
+                        // Use a temporary high position to avoid conflicts
+                        const tempPosition = 999999;
+                        
+                        // First move the conflicting lesson to temp position
+                        await tx.lessons.update({
+                          where: { id: lessonWithTargetPosition.id },
+                          data: { order_position: tempPosition }
+                        });
+                        
+                        // Now move our lesson to the target position
+                        await tx.lessons.update({
+                          where: { id: lesson.id },
+                          data: { order_position: lesson.order_position }
+                        });
+                        
+                        // Finally move the conflicting lesson to our original position
+                        await tx.lessons.update({
+                          where: { id: lessonWithTargetPosition.id },
+                          data: { order_position: existingLesson.order_position }
+                        });
+                      } else {
+                        // No conflict, just update the position directly
+                        await tx.lessons.update({
+                          where: { id: lesson.id },
+                          data: { order_position: lesson.order_position }
                         });
                       }
-                      
-                      currentPosition++;
+                    } catch (error) {
+                      console.error("Error updating lesson position:", error);
+                      throw new AppError(400, "Failed to update lesson order position. Please try a different position.");
                     }
-                    
-                    // Update all lessons that need position changes
-                    for (const item of newPositions) {
-                      await tx.lessons.update({
-                        where: { id: item.id },
-                        data: { order_position: item.newPosition }
-                      });
-                    }
-                    
-                    // The actual lesson update with the desired position will happen in the next update call
                   }
                   
                   // Update existing lesson
@@ -392,16 +419,52 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
               }
             }
           } else {
-            // Create new module if it doesn't exist
-            const createdModule = await tx.modules.create({
-              data: {
-                title: module.title,
-                order_position: module.order_position,
-                duration: module.lessons && Array.isArray(module.lessons) && module.lessons.length > 0 ? 
-                  module.lessons.reduce((sum: number, l: any) => sum + (l && l.duration ? Number(l.duration) : 0), 0) : 0,
-                course_id: updated.id,
-              },
+            // Find all existing modules for this course
+            const existingModules = await tx.modules.findMany({
+              where: { course_id: updated.id },
+              orderBy: { order_position: 'asc' }
             });
+            
+            // Declare the variable outside the try/catch block so it's accessible later
+            let createdModule;
+            
+            try {
+              // Create the module with the requested position
+              createdModule = await tx.modules.create({
+                data: {
+                  title: module.title,
+                  order_position: module.order_position,
+                  duration: module.lessons && Array.isArray(module.lessons) && module.lessons.length > 0 ? 
+                    module.lessons.reduce((sum: number, l: any) => sum + (l && l.duration ? Number(l.duration) : 0), 0) : 0,
+                  course_id: updated.id,
+                },
+              });
+            } catch (error) {
+              // If we encounter a unique constraint error, use an alternative position
+              if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                console.log(`Module with order_position ${module.order_position} already exists, using next available position`);
+                
+                // Find the highest order_position currently in use
+                const nextPosition = existingModules.length > 0 ?
+                  Math.max(...existingModules.map(m => m.order_position)) + 1 : 1;
+                
+                console.log(`Using next available position: ${nextPosition} for new module`);
+                
+                // Create new module with the adjusted position
+                createdModule = await tx.modules.create({
+                  data: {
+                    title: module.title,
+                    order_position: nextPosition,
+                    duration: module.lessons && Array.isArray(module.lessons) && module.lessons.length > 0 ? 
+                      module.lessons.reduce((sum: number, l: any) => sum + (l && l.duration ? Number(l.duration) : 0), 0) : 0,
+                    course_id: updated.id,
+                  },
+                });
+              } else {
+                // Re-throw other errors
+                throw error;
+              }
+            }
       
             // Create lessons for the new module if they exist
             if (module.lessons && Array.isArray(module.lessons) && module.lessons.length > 0) {
@@ -458,22 +521,68 @@ export const updateCourse = async (courseSlug: string, courseData: Partial<Creat
       return updated;
     });
 
-    await clearCacheByPrefix(CACHE_KEYS.COURSES);
-    await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `detail-${courseSlug}`));
-    await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${courseSlug}`));
+    // Invalidate all related caches
+    try {
+      // Delete specific course caches
+      await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `detail-${courseSlug}`));
+      await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${courseSlug}`));
+      
+      // If the slug was changed, invalidate the old slug's caches too
+      if (courseData.slug && courseData.slug !== courseSlug) {
+        await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `detail-${courseData.slug}`));
+        await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${courseData.slug}`));
+      }
+      
+      // Clear user-specific course list caches (especially important for instructors)
+      await deletePatternFromCache(`${CACHE_KEYS.COURSES}:user-*`);
+      
+      
+      console.log(`Cache invalidated for course ${courseSlug} and all related caches`);
+    } catch (cacheError) {
+      // Just log cache errors but don't fail the operation
+      console.error('Error invalidating cache after course update:', cacheError);
+    }
 
 
     return updatedCourse;
   } catch (error) {
-   
+    console.error("Error updating course:", error);
     
-    if (error instanceof AppError) throw error;
+    // Improve error handling with more detailed messages
+    if (error instanceof AppError) {
+      throw error;
+    }
     
-    // Create a more specific error message if possible
-    const errorMessage = error instanceof Error 
-      ? `Error updating course: ${error.message}` 
-      : "Error updating course.";
+    // Handle specific Prisma errors
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // Handle transaction-specific errors
+      if (error.message.includes("Transaction")) {
+        throw new AppError(500, "Database transaction failed despite retry attempts. This could be due to high database load or connection issues. Please try again in a few moments.");
+      }
+      
+      // Handle constraint violations
+      if (error.code === 'P2002') {
+        const targetField = error.meta?.target as string[] || [];
+        
+        // Handle specific unique constraint violations
+        if (targetField.includes('order_position')) {
+          if (targetField.includes('course_id')) {
+            throw new AppError(400, `A module with this position already exists in this course. Please try a different position.`);
+          } else if (targetField.includes('module_id')) {
+            throw new AppError(400, `A lesson with this position already exists in this module. Please try a different position.`);
+          } else {
+            throw new AppError(400, `An item with this order position already exists. Please try a different position.`);
+          }
+        } else {
+          throw new AppError(400, `A course with this ${targetField.join(', ') || 'attribute'} already exists.`);
+        }
+      }
+      
+      // Handle other Prisma errors
+      throw new AppError(500, `Database error: ${error.message}`);
+    }
     
-    throw new AppError(500, errorMessage);
+    // Generic error fallback
+    throw new AppError(500, "Error updating course. Please try again later.");
   }
 };

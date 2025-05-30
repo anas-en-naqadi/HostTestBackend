@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Certificate of Achievement</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @media print {
+        body {
+          margin: 0;
+          box-shadow: none;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      }
+      .certificate-text {
+        color: #2c5f5a;
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 font-sans">
+    <div
+      class="w-[614px] h-[474px] mx-auto relative overflow-hidden bg-cover bg-center"
+      style="background-image: url('{{BACKGROUND_IMAGE}}')"
+    >
+      <div class="relative z-20 flex flex-col h-full">
+        <!-- Student Name Section - positioned after "This certificate is proudly presented to:" -->
+        <div class="absolute top-[210px] left-[12px] right-[50px] text-left">
+          <h3 class="text-2xl font-semibold certificate-text">
+            {{STUDENT_NAME}}
+          </h3>
+        </div>
+      </div>
+
+      <!-- Course Title Section - positioned after "has successfully completed the online course:" -->
+      <div class="absolute top-[272px] left-[12px] right-[50px] text-left">
+        <h4 class="text-xl font-medium certificate-text">{{COURSE_TITLE}}</h4>
+      </div>
+
+      <!-- Bottom Section -->
+      <div class="flex flex-col w-4/5 justify-between items-end mt-12 mr-9">
+        <!-- Date Section - positioned at bottom left -->
+        <div class="absolute bottom-[50px] left-[12px]">
+          <p class="text-[10px] certificate-text font-medium">
+            {{COMPLETION_DATE}}
+          </p>
+        </div>
+
+        <!-- Certificate Reference Section - positioned at bottom right -->
+        <div class="absolute bottom-[50px] left-[206px]">
+          <p class="text-[10px] certificate-text font-mono">
+            {{CERTIFICATE_CODE}}
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,8 +1,7 @@
 import prisma from "../../config/prisma";
 import { Prisma } from '@prisma/client';
 import { AppError } from "../../middleware/error.middleware";
-import { clearCacheByPrefix, CACHE_KEYS } from "../../utils/cache.utils";
-import { deleteFromCache, generateCacheKey } from "../../utils/cache.utils";
+import { clearCacheByPrefix, CACHE_KEYS, deleteFromCache, generateCacheKey, deletePatternFromCache } from "../../utils/cache.utils";
 
 // Remove a course by its ID  
 export const removeCourseBySlug = async (slug: string): Promise<void> => {
@@ -22,21 +21,19 @@ export const removeCourseBySlug = async (slug: string): Promise<void> => {
       where: { slug },
     });
 
-    // Clear relevant cache by prefix
-    await clearCacheByPrefix(CACHE_KEYS.COURSES);
-    await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}`));
-    await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `detail-${slug}`));
-
-      
-    // Invalidate caches
+    // Invalidate all related caches
     try {
-      // Delete the specific course cache
+      // Delete specific course caches
+      await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}`));
       await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `detail-${slug}`));
-            
-      // Clear the courses list cache
+      
+      // Clear user-specific course list caches
+      await deletePatternFromCache(`${CACHE_KEYS.COURSES}:user-*`);
+      
+      // Clear general course list caches
       await clearCacheByPrefix(CACHE_KEYS.COURSES);
-            
-      console.log(`Cache invalidated for course ${slug} and courses list`);
+      
+      console.log(`Cache invalidated for course ${slug} and all related caches`);
     } catch (cacheError) {
       // Just log cache errors but don't fail the operation
       console.error('Error invalidating cache:', cacheError);

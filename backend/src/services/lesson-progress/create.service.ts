@@ -4,6 +4,7 @@ import redis from '../../config/redis';
 import { ClearDashboardCache } from '../../utils/clear_cache.utils';
 import { sendNotification } from '../../utils/notification.utils';
 const prisma = new PrismaClient();
+const getCertificatesCacheKey = (userId: number) => `certificates:${userId}`;
 
 export const createLessonProgress = async (
   userId: number,
@@ -121,6 +122,8 @@ export const createLessonProgress = async (
   });
 
   await deleteFromCache(cacheKey);
+  await deleteFromCache(getCertificatesCacheKey(userId));
+
   const keys = await redis.keys(cacheKeyE);
 if (keys.length > 0) {
   // Spread the array so each key is its own argument

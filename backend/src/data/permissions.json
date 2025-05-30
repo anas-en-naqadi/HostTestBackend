@@ -133,12 +133,8 @@
       "description": "Ability to view certificates"
     },
     {
-      "name": "certificate:update",
-      "description": "Ability to update certificates"
-    },
-    {
-      "name": "certificate:delete",
-      "description": "Ability to delete certificates"
+      "name": "certificate:download",
+      "description": "Ability to download certificates"
     },
     {
       "name": "activity_log:view",

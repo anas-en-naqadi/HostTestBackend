@@ -7,13 +7,13 @@ import { logActivity } from '../../utils/activity_log.utils';
 export class EmailVerificationController {
   static async verifyEmail(req: Request, res: Response): Promise<void> {
     try {
-      const { token } = req.body;
+      const { token, hashedId } = req.body;
 
       // Validate token
-      AuthValidation.validateEmailVerification({ token });
+      AuthValidation.validateEmailVerification({ token, hashedId });
 
       // Verify email
-    const user =  await EmailVerificationService.verifyEmail(token);
+    const user =  await EmailVerificationService.verifyEmail(token, hashedId);
 
       logActivity(
         user.id,

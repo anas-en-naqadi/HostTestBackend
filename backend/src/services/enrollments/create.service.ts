@@ -36,6 +36,7 @@ interface EnrollmentWithDetails extends enrollments {
  */
 const getEnrollmentsCachePattern = (userId: number): string =>
   `enrollments:${userId}:*`;
+const getCertificatesCacheKey = (userId: number) => `certificates:${userId}`;
 
 /**
  * Validates course existence and structure
@@ -195,6 +196,7 @@ const clearEnrollmentCaches = async (userId: number, courseSlug: string): Promis
     await deleteFromCache(
       generateCacheKey(CACHE_KEYS.COURSE, `detail-${courseSlug}`)
     );
+    await deleteFromCache(getCertificatesCacheKey(userId));
 
     // Clear user enrollment caches
     const enrollmentKeys = await redis.keys(getEnrollmentsCachePattern(userId));

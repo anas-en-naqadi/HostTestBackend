@@ -1,4 +1,4 @@
-import Router from 'express';
+import Router, { RequestHandler } from 'express';
 import {
   listCoursesController,
   getCourseBySlugController,
@@ -8,7 +8,7 @@ import {
 } from '../controllers/course';
 import { createCourseController } from '../controllers/course/create.controller';
 import { authenticate, hasRole, hasPermission } from '../middleware/auth.middleware';
-import { updateCourseController } from '../controllers/course';
+import { updateCourseController } from '../controllers/course/update.controller';
 import { UserRole } from '../types/user.types';
 import { validateSlug } from '../middleware/validator.middleware';
 import { upload } from '../middleware/upload.middleware';
@@ -22,23 +22,23 @@ router.use(authenticate);
 router.post('/',
   hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
   hasPermission('course:create'),
-  upload.single('thumbnail'),
-  createCourseController
+  upload.any(), // Use any() to accept all fields including dynamic lesson_video_* fields
+  createCourseController as RequestHandler
 );
 
 router.put('/:slug',
   hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
   hasPermission('course:update'),
   validateSlug,
-  upload.single('thumbnail'),
-  updateCourseController
+  upload.any(), // Use any() to accept all fields including dynamic lesson_video_* fields
+  updateCourseController as RequestHandler
 );
 
 router.put('/:slug/json',
   hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
   hasPermission('course:update'),
   validateSlug,
-  updateCourseController
+  updateCourseController as RequestHandler
 );
 
 router.delete('/:slug',
