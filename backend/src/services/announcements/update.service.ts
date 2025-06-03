@@ -10,10 +10,10 @@ export const updateAnnouncement = async (
 ): Promise<announcements> => {
   const announcement = await prisma.announcements.findUnique({
     where: { id },
-    include: { courses: { include: { user: { select: { id: true } } } } },
+    include: { courses: { include: { user: { select: { id: true,roles:true } } } } },
   });
-  if (!announcement || announcement.courses.user?.id !== userId) {
-    throw new Error("Announcement not found or unauthorized");
+  if (!announcement || announcement.courses.user.roles.name === "intern") {
+    throw new Error("Announcement not found or unauthorized for intern users");
   }
 
   const updatedAnnouncement = await prisma.announcements.update({

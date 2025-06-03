@@ -4,6 +4,10 @@ import { successResponse, errorResponse } from '../../utils/api.utils';
 import { AppError } from '../../middleware/error.middleware';
 import { ApiResponse } from '../../utils/api.utils';
 import { CACHE_KEYS, generateCacheKey, deleteFromCache, clearCacheByPrefix } from '../../utils/cache.utils';
+import { logActivity } from '../../utils/activity_log.utils';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 /**
  * Controller to delete a user
@@ -23,7 +27,23 @@ export const removeUserController = async (
       throw new AppError(400, 'Invalid user ID');
     }
 
+    // Get user details before deletion for logging
+    const userToDelete = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { full_name: true, email: true }
+    });
+    
     await removeUser(userId);
+    
+    // Log activity if admin user is removing this user
+    if (req.user && userToDelete) {
+      logActivity(
+        req.user.id,
+        'USER_DELETED',
+        `${req.user.full_name} deleted user: ${userToDelete.full_name} (${userToDelete.email})`,
+        req.ip
+      ).catch(console.error);
+    }
     
     // Invalidate caches
     try {
@@ -40,7 +60,7 @@ export const removeUserController = async (
       // Continue execution even if cache invalidation fails
     }
     
-     successResponse(res, null, 'User deleted successfully');
+    successResponse(res, null, 'User deleted successfully');
   } catch (error) {
     console.error('Error deleting user:', error);
     

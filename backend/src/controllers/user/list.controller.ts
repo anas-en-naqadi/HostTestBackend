@@ -5,6 +5,8 @@ import {  UserResponse } from '../../types/user.types';
 import { CACHE_KEYS, getFromCache, setInCache } from '../../utils/cache.utils';
 import { ApiResponse } from '../../utils/api.utils';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
+
 /**
  * Controller to get all users
  * @param req Express request
@@ -23,6 +25,14 @@ export const listUsersController = async (
     }
     // If not in cache, get from service
     const users = await listUsers(userId);
+    
+    // Log activity
+    logActivity(
+      userId,
+      'USER_LIST_VIEW',
+      `${req.user!.full_name} viewed the list of users`,
+      req.ip
+    ).catch(console.error);
       
      successResponse(res, users);
   } catch (error) {

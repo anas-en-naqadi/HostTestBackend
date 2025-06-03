@@ -41,6 +41,14 @@ export const deleteQuestionController = async (req: AuthRequest, res: Response) 
 
     const questionId = parseInt(req.params.questionId, 10);
     await deleteQuestion(user.id, questionId);
+    
+    logActivity(
+      user.id,
+      'QUIZ_QUESTION_DELETED',
+      `${user.full_name} deleted quiz question ID ${questionId}`,
+      req.ip
+    ).catch(console.error);
+    
     res.status(200).json({success: true , message: 'Question deleted successfully' });
     // res.status(204).send();
   } catch (error) {
@@ -62,6 +70,14 @@ export const deleteOptionController = async (req: AuthRequest, res: Response) =>
 
     const optionId = parseInt(req.params.optionId, 10);
     await deleteOption(user.id, optionId);
+    
+    logActivity(
+      user.id,
+      'QUIZ_OPTION_DELETED',
+      `${user.full_name} deleted quiz option ID ${optionId}`,
+      req.ip
+    ).catch(console.error);
+    
     res.status(200).json({success: true , message: 'Option deleted successfully' });
   } catch (error) {
     if (error instanceof AppError) {

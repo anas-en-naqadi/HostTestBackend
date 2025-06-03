@@ -1,32 +1,43 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { uploadConfig } from '../config/upload';
 
-// Base uploads directory path
-const UPLOADS_DIR = path.join(__dirname, '../../uploads');
+// Get all directory paths from the upload configuration
+const UPLOADS_DIR = uploadConfig.getAbsolutePath();
+const THUMBNAILS_DIR = uploadConfig.getThumbnailPath();
+const VIDEOS_DIR = uploadConfig.getIntroVideoPath();
+const COURSE_VIDEOS_DIR = uploadConfig.getAbsolutePath(uploadConfig.courseVideosDir);
 
-// Ensure uploads directory exists
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
+// Ensure all required directories exist
+const ensureAllDirectoriesExist = () => {
+  // Base uploads directory
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    console.log(`Created base uploads directory: ${UPLOADS_DIR}`);
+  }
 
-// Create course thumbnail directory
-const THUMBNAILS_DIR = path.join(UPLOADS_DIR, 'thumbnails');
-if (!fs.existsSync(THUMBNAILS_DIR)) {
-  fs.mkdirSync(THUMBNAILS_DIR, { recursive: true });
-}
+  // Thumbnails directory
+  if (!fs.existsSync(THUMBNAILS_DIR)) {
+    fs.mkdirSync(THUMBNAILS_DIR, { recursive: true });
+    console.log(`Created thumbnails directory: ${THUMBNAILS_DIR}`);
+  }
 
-// Create intro videos directory
-const VIDEOS_DIR = path.join(UPLOADS_DIR, 'intro_videos');
-if (!fs.existsSync(VIDEOS_DIR)) {
-  fs.mkdirSync(VIDEOS_DIR, { recursive: true });
-}
+  // Intro videos directory
+  if (!fs.existsSync(VIDEOS_DIR)) {
+    fs.mkdirSync(VIDEOS_DIR, { recursive: true });
+    console.log(`Created intro videos directory: ${VIDEOS_DIR}`);
+  }
 
-// Create course videos directory (for lesson videos)
-const COURSE_VIDEOS_DIR = path.join(UPLOADS_DIR, 'course_videos');
-if (!fs.existsSync(COURSE_VIDEOS_DIR)) {
-  fs.mkdirSync(COURSE_VIDEOS_DIR, { recursive: true });
-}
+  // Course videos directory
+  if (!fs.existsSync(COURSE_VIDEOS_DIR)) {
+    fs.mkdirSync(COURSE_VIDEOS_DIR, { recursive: true });
+    console.log(`Created course videos directory: ${COURSE_VIDEOS_DIR}`);
+  }
+};
+
+// Create all required directories on module load
+ensureAllDirectoriesExist();
 
 /**
  * Generate a secure filename for uploaded files
@@ -63,7 +74,7 @@ export const saveThumbnail = (file: Express.Multer.File): string => {
     const backendUrl = process.env.SERVER_URL;
     
     // Return the full URL for the thumbnail
-    return `${backendUrl}/uploads/thumbnails/${secureFilename}`;
+    return `${backendUrl}/${uploadConfig.uploadDir}/${uploadConfig.thumbnailsDir}/${secureFilename}`;
   } catch (error) {
     console.error(`Error saving thumbnail ${file.originalname}:`, error);
     throw new Error(`Failed to save thumbnail: ${(error as Error).message}`);
@@ -95,7 +106,7 @@ export const saveIntroVideo = (file: Express.Multer.File): string => {
   const backendUrl = process.env.SERVER_URL;
   
   // Return the full URL for the video
-  return `${backendUrl}/uploads/intro_videos/${secureFilename}`;
+  return `${backendUrl}/${uploadConfig.uploadDir}/${uploadConfig.introVideosDir}/${secureFilename}`;
 };
 
 /**
@@ -105,12 +116,14 @@ export const getThumbnailPath = (thumbnailUrl: string): string => {
   if (!thumbnailUrl) return '';
   
   try {
-    // Extract the filename from the URL (works with both relative and full URLs)
-    const urlPath = new URL(thumbnailUrl, process.env.SERVER_URL).pathname;
-    const filename = path.basename(urlPath);
+    // Extract filename from URL
+    const urlParts = thumbnailUrl.split('/');
+    const filename = urlParts[urlParts.length - 1];
+    
+    // Return absolute path
     return path.join(THUMBNAILS_DIR, filename);
   } catch (error) {
-    console.error('Error getting thumbnail path:', error);
+    console.error(`Error getting thumbnail path for ${thumbnailUrl}:`, error);
     return '';
   }
 };
@@ -122,12 +135,14 @@ export const getVideoPath = (videoUrl: string): string => {
   if (!videoUrl) return '';
   
   try {
-    // Extract the filename from the URL (works with both relative and full URLs)
-    const urlPath = new URL(videoUrl, process.env.SERVER_URL).pathname;
-    const filename = path.basename(urlPath);
+    // Extract filename from URL
+    const urlParts = videoUrl.split('/');
+    const filename = urlParts[urlParts.length - 1];
+    
+    // Return absolute path
     return path.join(VIDEOS_DIR, filename);
   } catch (error) {
-    console.error('Error getting video path:', error);
+    console.error(`Error getting video path for ${videoUrl}:`, error);
     return '';
   }
 };
@@ -243,8 +258,8 @@ export const deleteThumbnail = (thumbnailUrl: string): boolean => {
     return false;
   } catch (error) {
     console.error('Error in deleteThumbnail function:', error);
-  return false;
-}
+    return false;
+  }
 };
 
 /**
@@ -253,7 +268,7 @@ export const deleteThumbnail = (thumbnailUrl: string): boolean => {
  * @returns The path to the course videos directory
  */
 export const ensureCourseVideosDir = (courseSlug: string): string => {
-  const courseDir = path.join(COURSE_VIDEOS_DIR, courseSlug);
+  const courseDir = uploadConfig.getCourseVideoPath(courseSlug);
   if (!fs.existsSync(courseDir)) {
     fs.mkdirSync(courseDir, { recursive: true });
   }
@@ -273,15 +288,14 @@ export const saveLessonVideo = (file: Express.Multer.File, courseSlug: string): 
     throw new Error(`Invalid video file type: ${file.mimetype}. Supported types: mp4, webm, ogg, mov, mkv`);
   }
   
-  // Ensure the course directory exists
+  // Ensure course directory exists
   const courseDir = ensureCourseVideosDir(courseSlug);
   
-  // Generate a secure filename
   const secureFilename = generateSecureFilename(file.originalname);
   const destPath = path.join(courseDir, secureFilename);
   
   try {
-    // Copy the file from temporary upload location to the course videos directory
+    // Copy the file from temporary upload location to course videos directory
     fs.copyFileSync(file.path, destPath);
     
     // Try to delete the temporary file
@@ -296,7 +310,7 @@ export const saveLessonVideo = (file: Express.Multer.File, courseSlug: string): 
     const backendUrl = process.env.SERVER_URL;
     
     // Return the full URL for the video
-    return `${backendUrl}/uploads/course_videos/${courseSlug}/${secureFilename}`;
+    return `${backendUrl}/${uploadConfig.uploadDir}/${uploadConfig.courseVideosDir}/${courseSlug}/${secureFilename}`;
   } catch (error) {
     console.error(`Error saving lesson video ${file.originalname}:`, error);
     throw new Error(`Failed to save lesson video: ${(error as Error).message}`);
@@ -312,16 +326,18 @@ export const getLessonVideoPath = (videoUrl: string): string => {
   if (!videoUrl) return '';
   
   try {
-    // Extract the filename and course directory from the URL
-    const urlPath = new URL(videoUrl, process.env.SERVER_URL).pathname;
-    // The path will be like /uploads/course_videos/course-slug/filename.mp4
-    const pathParts = urlPath.split('/');
-    const filename = pathParts.pop() || ''; // Get the filename
-    const courseSlug = pathParts.pop() || ''; // Get the course slug
+    // Extract course slug and filename from URL
+    // URL format: <backend>/<uploadDir>/<courseVideosDir>/<course-slug>/<filename>
+    const urlParts = videoUrl.split('/');
     
+    // Get the last two segments (course-slug and filename)
+    const filename = urlParts[urlParts.length - 1];
+    const courseSlug = urlParts[urlParts.length - 2];
+    
+    // Return absolute path
     return path.join(COURSE_VIDEOS_DIR, courseSlug, filename);
   } catch (error) {
-    console.error('Error getting lesson video path:', error);
+    console.error(`Error getting lesson video path for ${videoUrl}:`, error);
     return '';
   }
 };

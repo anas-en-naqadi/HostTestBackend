@@ -6,6 +6,7 @@ import { getPopularCourses } from "../../services/admin_dashboard/courseSuggesti
 import { successResponse, errorResponse } from "../../utils/api.utils";
 import { DashboardResponse } from "../../types/dashboard.types";
 import { AppError } from "../../middleware/error.middleware";
+import { logActivity } from "../../utils/activity_log.utils";
 
 export const getDashboardDataController = async (
   req: Request,
@@ -28,6 +29,14 @@ export const getDashboardDataController = async (
       performanceData,
       popularCourses,
     };
+    
+    // Log activity
+    logActivity(
+      userId,
+      'ADMIN_DASHBOARD_COMPLETE_VIEW',
+      `${req.user!.full_name} viewed the complete admin dashboard data`,
+      req.ip
+    ).catch(console.error);
 
     return successResponse(
       res,

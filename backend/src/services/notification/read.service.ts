@@ -10,10 +10,11 @@ const prisma = new PrismaClient();
 
 /**
  * Mark all notifications as read for a specific user
+ * @returns The number of notifications marked as read
  */
 export const markAllNotificationsAsRead = async (
   userId: number
-): Promise<void> => {
+): Promise<number> => {
   // Update all unread notifications for this user
   const result = await prisma.notifications.updateMany({
     where: { 
@@ -29,5 +30,5 @@ export const markAllNotificationsAsRead = async (
   const cacheKey = generateCacheKey(CACHE_KEYS.NOTIFICATIONS, userId);
   await deleteFromCache(cacheKey);
 
-  
+  return result.count;
 };

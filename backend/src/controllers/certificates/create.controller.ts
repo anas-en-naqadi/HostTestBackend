@@ -5,6 +5,7 @@ import { AppError } from '../../middleware/error.middleware';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
+import { logActivity } from '../../utils/activity_log.utils';
 
 const prisma = new PrismaClient();
 
@@ -33,6 +34,14 @@ export const createCertificateController = async (
     }
 
     const certificate = await createCertificate(userId, Number(enrollmentId));
+    
+    // Log certificate creation activity
+    logActivity(
+      userId,
+      'CERTIFICATE_CREATED',
+      `${user.full_name} completed course and ready to download certificate for enrollment ID ${enrollmentId}`,
+      req.ip
+    ).catch(console.error);
     
     res.status(201).json({
       success: true,
@@ -182,6 +191,14 @@ export const regenerateCertificateController = async (
     }
 
     const certificate = await regenerateCertificate(Number(certificateId));
+    
+    // Log certificate regeneration activity
+    logActivity(
+      user.id,
+      'CERTIFICATE_REGENERATED',
+      `${user.full_name} regenerated certificate ID ${certificateId}`,
+      req.ip
+    ).catch(console.error);
     
     res.status(200).json({
       success: true,
@@ -439,7 +456,7 @@ export const verifyCertificateController = async (
       course: {
         title: certificate.enrollments.courses.title,
       },
-      organization: 'AcadeMe Learning Platform'
+      organization: 'Forge Learning Platform'
     };
 
     res.status(200).json({

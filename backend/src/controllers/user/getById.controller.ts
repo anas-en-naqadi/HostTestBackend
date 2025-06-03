@@ -5,6 +5,8 @@ import { AppError } from '../../middleware/error.middleware';
 import { UserResponse } from '../../types/user.types';
 import { CACHE_KEYS, generateCacheKey, getFromCache, setInCache } from '../../utils/cache.utils';
 import { ApiResponse } from '../../utils/api.utils';
+import { logActivity } from '../../utils/activity_log.utils';
+
 /**
  * Controller to get a user by ID
  * @param req Express request
@@ -33,6 +35,16 @@ export const getUserByIdController = async (
 
     // If not in cache, get from service
     const user = await getUserById(userId);
+    
+    // Log activity if authenticated user is viewing this user
+    if (req.user) {
+      logActivity(
+        req.user.id,
+        'USER_VIEWED',
+        `${req.user.full_name} viewed user info: ${user.full_name} (ID: ${userId})`,
+        req.ip
+      ).catch(console.error);
+    }
     
     // Store in cache for future requests
     await setInCache(cacheKey, user);

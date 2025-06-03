@@ -3,6 +3,7 @@ import { Response } from 'express';
 import { createUserAnswer } from '../../services/user-answers/create.service';
 import { AppError } from '../../middleware/error.middleware';
 import { AuthRequest } from '../../types/quiz.types'; // Assuming this type includes `req.user`
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const createUserAnswerController = async (req: AuthRequest, res: Response) => {
   try {
@@ -22,6 +23,14 @@ export const createUserAnswerController = async (req: AuthRequest, res: Response
       questionId: Number(questionId),
       optionId
     });
+
+    // Log activity
+    logActivity(
+      user.id,
+      'USER_ANSWER_SUBMITTED',
+      `${user.full_name} submitted answer for question ID ${questionId} in quiz attempt ID ${attemptId}`,
+      req.ip
+    ).catch(console.error);
 
     res.status(201).json({
       success: true,

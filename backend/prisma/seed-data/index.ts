@@ -12,15 +12,15 @@ export async function seed(prisma: PrismaClient) {
   try {
     // Seed in correct order to maintain relationships
     
-    // 1. Categories
-    const categories = await seedCategories(prisma);
-    const categoryIds = categories.map(category => category.id);
-    
-    // 2. Roles (required before users)
+    // 1. Roles (required before users)
     await seedRoles(prisma);
     
-    // 3. Users (required before instructors)
+    // 2. Users (required before categories and instructors)
     await seedUsers(prisma);
+    
+    // 3. Categories (now users exist for created_by foreign key)
+    const categories = await seedCategories(prisma);
+    const categoryIds = categories.map(category => category.id);
     
     // 4. Instructors
     const instructors = await seedInstructors(prisma);

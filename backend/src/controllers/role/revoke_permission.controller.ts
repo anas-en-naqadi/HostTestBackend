@@ -5,6 +5,10 @@ import { revokePermission } from '../../services/role';
 import { successResponse, errorResponse } from '../../utils/api.utils';
 import { AppError } from '../../middleware/error.middleware';
 import { ApiResponse, AssignPermissionDto } from '../../types/role.types';
+import { logActivity } from '../../utils/activity_log.utils';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export const revokePermissionController = async (
   req: Request<{}, {}, AssignPermissionDto>,
@@ -18,6 +22,28 @@ export const revokePermissionController = async (
    }
 
     await revokePermission(role_permissions);
+    
+    // Log activity if admin user is revoking permissions
+    if (req.user) {
+      // Get role details for better logging
+      const roleIds = [...new Set(role_permissions.map(rp => rp.role_id))];
+      const roles = await prisma.roles.findMany({
+        where: { id: { in: roleIds } },
+        select: { id: true, name: true }
+      });
+      
+      // Get permission details for better logging
+      const permissionIds = [...new Set(role_permissions.map(rp => rp.permission_id))];
+      const roleNames = roles.map(r => r.name).join(', ');
+      const permissionCount = permissionIds.length;
+      
+      logActivity(
+        req.user.id,
+        'ROLE_PERMISSIONS_REVOKED',
+        `${req.user.full_name} revoked ${permissionCount} permissions from roles: ${roleNames}`,
+        req.ip
+      ).catch(console.error);
+    }
    
     successResponse(res, null, 'Permission revoked from role successfully');
   } catch (err) {

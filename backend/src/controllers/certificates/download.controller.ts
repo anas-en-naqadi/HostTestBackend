@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
 import { downloadCertificateService } from '../../services/certificates/download.service';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const downloadCertificateController = async (
   req: Request,
@@ -35,6 +36,16 @@ export const downloadCertificateController = async (
     // Set appropriate headers for file download
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    
+    // Log certificate download activity
+    if (req.user) {
+      logActivity(
+        userId,
+        'CERTIFICATE_DOWNLOADED',
+        `${req.user.full_name} downloaded certificate for enrollment ID ${enrollmentId}`,
+        req.ip
+      ).catch(console.error);
+    }
     
     // Stream the file to the response
     const fileStream = fs.createReadStream(filePath);

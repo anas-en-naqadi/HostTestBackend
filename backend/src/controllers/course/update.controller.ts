@@ -8,6 +8,7 @@ import { saveThumbnail, deleteThumbnail, saveIntroVideo, deleteIntroVideo, saveL
 import prisma from '../../config/prisma';
 import { MulterRequest } from '../../types/multer.types';
 import { lesson_content_type } from '../../types/course.types';
+import { logActivity } from '../../utils/activity_log.utils';
 
 // This is the Express route handler
 export const updateCourseController = async (req: MulterRequest, res: Response, next: NextFunction) => {
@@ -330,6 +331,14 @@ export const updateCourseController = async (req: MulterRequest, res: Response, 
     
     // Update the course in the database
     const updatedCourse = await updateCourse(courseSlug, courseData);
+    
+    // Log the activity
+    logActivity(
+      req.user?.id!,
+      'COURSE_UPDATED',
+      `${req.user?.full_name} updated course: ${updatedCourse.title} (${courseSlug})`,
+      req.ip
+    ).catch(console.error);
     
     // Send a single response at the end
     return successResponse(res, updatedCourse);

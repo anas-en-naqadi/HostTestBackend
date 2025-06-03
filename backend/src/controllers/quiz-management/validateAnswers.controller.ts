@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { validateAnswersService } from '../../services/quiz-management/validateAnswers.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const validateAnswersController = async (
   req: Request,
@@ -23,12 +24,26 @@ export const validateAnswersController = async (
     
     const results = await validateAnswersService(Number(quizId), answers);
     
+    // Calculate score
+    const score = results.filter(r => r.isCorrect).length;
+    const total = results.length;
+    
+    // Log activity if user is authenticated
+    if (req.user) {
+      logActivity(
+        req.user.id,
+        'QUIZ_ANSWERS_SUBMITTED',
+        `${req.user.full_name} submitted ${total} answers for quiz ID ${quizId} with score ${score}/${total} (${Math.round((score/total)*100)}%)`,
+        req.ip
+      ).catch(console.error);
+    }
+    
     res.status(200).json({ 
       success: true, 
       results,
       // Calculate overall score
-      score: results.filter(r => r.isCorrect).length,
-      total: results.length
+      score,
+      total
     });
   } catch (error) {
     next(error);

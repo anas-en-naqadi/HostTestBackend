@@ -3,6 +3,7 @@ import { Response, NextFunction, Request } from 'express';
 import { getCertificates } from '../../services/certificates/list.service';
 import { AppError } from '../../middleware/error.middleware';
 import { errorResponse, successResponse } from '../../utils/api.utils';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const listCertificatesController = async (
   req: Request,
@@ -17,14 +18,23 @@ export const listCertificatesController = async (
 
     const userId = user.id;
     const certificates = await getCertificates(userId);
-    console.log("certificates",certificates)
-    successResponse(res,certificates, 'Certificates retrieved successfully',200);
+    console.log("certificates", certificates)
+
+    // Log certificate list viewing activity
+    logActivity(
+      userId,
+      'CERTIFICATES_VIEWED',
+      `${user.full_name} viewed their certificates list (${certificates.length || 0} certificates)`,
+      req.ip
+    ).catch(console.error);
+
+    successResponse(res, certificates, 'Certificates retrieved successfully', 200);
   } catch (error) {
     if (error instanceof AppError) {
-      errorResponse(res, 'Failed to retrieve certificates',500,error.errors);
+      errorResponse(res, 'Failed to retrieve certificates', 500, error.errors);
     } else {
       console.error('List certificates error:', error);
-      errorResponse(res, 'Failed to retrieve certificates',500,error);
+      errorResponse(res, 'Failed to retrieve certificates', 500, error);
     }
   }
 };

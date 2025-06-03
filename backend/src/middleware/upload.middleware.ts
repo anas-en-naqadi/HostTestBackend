@@ -3,6 +3,7 @@ import path from 'path';
 import { Request } from 'express';
 import fs from 'fs';
 import winston from 'winston';
+import { uploadConfig } from '../config/upload';
 
 // Use the same logger configuration as in logging.middleware.ts
 const logger = winston.createLogger({
@@ -23,17 +24,39 @@ if (process.env.NODE_ENV !== 'production') {
   }));
 }
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../../uploads');
-const courseVideosDir = path.join(__dirname, '../../uploads/course_videos');
+// Ensure all required upload directories exist
+const ensureDirectoriesExist = () => {
+  // Base uploads directory
+  const baseDir = uploadConfig.getAbsolutePath();
+  if (!fs.existsSync(baseDir)) {
+    fs.mkdirSync(baseDir, { recursive: true });
+    logger.info(`Created base uploads directory: ${baseDir}`);
+  }
 
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+  // Course videos directory
+  const courseVideosDir = uploadConfig.getAbsolutePath(uploadConfig.courseVideosDir);
+  if (!fs.existsSync(courseVideosDir)) {
+    fs.mkdirSync(courseVideosDir, { recursive: true });
+    logger.info(`Created course videos directory: ${courseVideosDir}`);
+  }
 
-if (!fs.existsSync(courseVideosDir)) {
-  fs.mkdirSync(courseVideosDir, { recursive: true });
-}
+  // Intro videos directory
+  const introVideosDir = uploadConfig.getAbsolutePath(uploadConfig.introVideosDir);
+  if (!fs.existsSync(introVideosDir)) {
+    fs.mkdirSync(introVideosDir, { recursive: true });
+    logger.info(`Created intro videos directory: ${introVideosDir}`);
+  }
+
+  // Thumbnails directory
+  const thumbnailsDir = uploadConfig.getAbsolutePath(uploadConfig.thumbnailsDir);
+  if (!fs.existsSync(thumbnailsDir)) {
+    fs.mkdirSync(thumbnailsDir, { recursive: true });
+    logger.info(`Created thumbnails directory: ${thumbnailsDir}`);
+  }
+};
+
+// Create all required directories
+ensureDirectoriesExist();
 
 // Configure storage
 const storage = multer.diskStorage({
@@ -45,7 +68,7 @@ const storage = multer.diskStorage({
       
       if (courseSlug) {
         // Create course-specific directory if it doesn't exist
-        const courseDirPath = path.join(courseVideosDir, courseSlug);
+        const courseDirPath = uploadConfig.getCourseVideoPath(courseSlug);
         if (!fs.existsSync(courseDirPath)) {
           try {
             fs.mkdirSync(courseDirPath, { recursive: true });
@@ -56,10 +79,18 @@ const storage = multer.diskStorage({
         }
         return cb(null, courseDirPath);
       }
+    } else if (file.fieldname === 'intro_video') {
+      // For intro videos, use the intro videos directory
+      const introVideosDir = uploadConfig.getIntroVideoPath();
+      return cb(null, introVideosDir);
+    } else if (file.fieldname === 'thumbnail') {
+      // For thumbnails, use the thumbnails directory
+      const thumbnailsDir = uploadConfig.getThumbnailPath();
+      return cb(null, thumbnailsDir);
     }
     
-    // For other files (thumbnails, intro videos), use the default uploads directory
-    cb(null, uploadsDir);
+    // For other files, use the default uploads directory
+    cb(null, uploadConfig.getAbsolutePath());
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -70,21 +101,19 @@ const storage = multer.diskStorage({
 
 // File filter function
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  // Get file extension
+  const ext = path.extname(file.originalname).toLowerCase();
+  
   // Check file type based on field name
   if (file.fieldname === 'thumbnail') {
     // Accept images only for thumbnails
-    if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
-      return cb(new Error('Only image files (jpg, jpeg, png, gif,webp) are allowed for thumbnails!'));
+    if (!uploadConfig.allowedImageTypes.includes(ext)) {
+      return cb(new Error(`Only image files (${uploadConfig.allowedImageTypes.join(', ')}) are allowed for thumbnails!`));
     }
-  } else if (file.fieldname === 'intro_video') {
-    // Accept video files only for intro videos
-    if (!file.originalname.match(/\.(mp4|webm|ogg|mov|mkv)$/)) {
-      return cb(new Error('Only video files (mp4, webm, ogg, mov, mkv) are allowed for intro videos!'));
-    }
-  } else if (file.fieldname.startsWith('lesson_video_')) {
-    // Accept video files for lesson videos
-    if (!file.originalname.match(/\.(mp4|webm|ogg|mov|mkv)$/)) {
-      return cb(new Error('Only video files (mp4, webm, ogg, mov, mkv) are allowed for lesson videos!'));
+  } else if (file.fieldname === 'intro_video' || file.fieldname.startsWith('lesson_video_')) {
+    // Accept video files for intro videos and lesson videos
+    if (!uploadConfig.allowedVideoTypes.includes(ext)) {
+      return cb(new Error(`Only video files (${uploadConfig.allowedVideoTypes.join(', ')}) are allowed for videos!`));
     }
   } else {
     // For any other field, reject the file
@@ -98,7 +127,16 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilt
 export const upload = multer({ 
   storage: storage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB file size limit to accommodate videos
+    fileSize: uploadConfig.videoMaxSize, // Use dynamic file size limit from config
+  },
+  fileFilter: fileFilter,
+});
+
+// Export a specialized middleware for thumbnails with lower file size limit
+export const uploadThumbnail = multer({
+  storage: storage,
+  limits: {
+    fileSize: uploadConfig.thumbnailMaxSize, // Use dynamic thumbnail size limit from config
   },
   fileFilter: fileFilter,
 });

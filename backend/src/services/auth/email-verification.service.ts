@@ -62,8 +62,8 @@ export class EmailVerificationService {
       const templateData: EmailTemplateData = {
         userName: user.full_name,
         verificationUrl,
-        platformName: "AcadeMe",
-        supportEmail: process.env.SUPPORT_EMAIL || "support@academe.com",
+        platformName: "Forge",
+        supportEmail: process.env.SUPPORT_EMAIL || "support@forge.com",
         currentYear: new Date().getFullYear(),
       };
 
@@ -73,7 +73,7 @@ export class EmailVerificationService {
       // Send email
       await sendEmail({
         to: user.email,
-        subject: "Verify Your Email Address - AcadeMe",
+        subject: "Verify Your Email Address - Forge",
         html: htmlContent,
       });
     } catch (error) {
@@ -177,8 +177,8 @@ export class EmailVerificationService {
       const templateData: EmailTemplateData = {
         userName: user.full_name,
         verificationUrl,
-        platformName: "AcadeMe",
-        supportEmail: process.env.SUPPORT_EMAIL || "support@academe.com",
+        platformName: "Forge",
+        supportEmail: process.env.SUPPORT_EMAIL || "support@forge.com",
         currentYear: new Date().getFullYear(),
       };
 
@@ -188,7 +188,7 @@ export class EmailVerificationService {
       // Send email
       await sendEmail({
         to: user.email,
-        subject: "Verify Your Email Address - AcadeMe",
+        subject: "Verify Your Email Address - Forge",
         html: htmlContent,
       });
       return user;
@@ -251,8 +251,8 @@ export class EmailVerificationService {
         userName: user.full_name,
         verificationUrl,
         tempPassword,
-        platformName: "AcadeMe",
-        supportEmail: process.env.SUPPORT_EMAIL || "support@academe.com",
+        platformName: "Forge",
+        supportEmail: process.env.SUPPORT_EMAIL || "support@forge.com",
         currentYear: new Date().getFullYear(),
       };
 
@@ -263,7 +263,7 @@ export class EmailVerificationService {
       await sendEmail({
         to: user.email,
         subject:
-          "Welcome to AcadeMe - Verify Your Email and Access Your Account",
+          "Welcome to Forge - Verify Your Email and Access Your Account",
         html: htmlContent,
       });
     } catch (error) {

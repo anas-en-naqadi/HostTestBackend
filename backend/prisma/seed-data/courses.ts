@@ -66,6 +66,9 @@ export async function seedCourses(prisma: PrismaClient, categoryIds: number[], i
   const numCourses = Math.floor(Math.random() * 6) + 15; // 15-20 courses
   const createdCourses: Array<any> = [];
   
+  // Track used titles to avoid duplicates
+  const usedTitles = new Set<string>();
+  
   // Get all categories for matching course templates
   const allCategories = await prisma.categories.findMany();
   
@@ -82,15 +85,53 @@ export async function seedCourses(prisma: PrismaClient, categoryIds: number[], i
     const templates = courseTemplates[categoryName as keyof typeof courseTemplates] || 
                      courseTemplates['Web Development'];
     
-    // Choose a random template
-    const template = templates[Math.floor(Math.random() * templates.length)];
+    // Choose a random template that hasn't been used yet
+    let template;
+    let attempts = 0;
+    
+    do {
+      template = templates[Math.floor(Math.random() * templates.length)];
+      attempts++;
+      
+      // If we've tried too many times, just add a unique identifier to make it unique
+      if (attempts > 10 && usedTitles.has(template.title)) {
+        template = {
+          title: `${template.title} ${Date.now()}`,
+          subtitle: template.subtitle
+        };
+        break;
+      }
+    } while (usedTitles.has(template.title) && attempts < 10);
+    
+    // Mark this title as used
+    usedTitles.add(template.title);
     
     // Generate a unique slug from the title
     const baseSlug = template.title
       .toLowerCase()
       .replace(/[^\w\s]/gi, '')
       .replace(/\s+/gi, '-');
-    const slug = `${baseSlug}-${Math.floor(Math.random() * 1000)}`;
+    
+    // Ensure the slug is unique by checking existing slugs and adding a timestamp if needed
+    let slug = `${baseSlug}-${Math.floor(Math.random() * 1000)}`;
+    let slugExists = true;
+    let attemptsSlug = 0;
+    
+    // Keep trying until we find a unique slug
+    while (slugExists && attemptsSlug < 10) {
+      // Check if this slug already exists
+      const existingCourse = await prisma.courses.findUnique({
+        where: { slug }
+      });
+      
+      if (!existingCourse) {
+        slugExists = false; // Slug is unique, we can use it
+      } else {
+        // Add timestamp to make it unique
+        slug = `${baseSlug}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        attempts++;
+      }
+    }
     
     // Generate "what you will learn" array
     const whatYouWillLearn = Array.from({ length: 3 + Math.floor(Math.random() * 3) }, () => 
@@ -112,7 +153,8 @@ export async function seedCourses(prisma: PrismaClient, categoryIds: number[], i
     // We'll set a temporary duration that will be updated after modules and lessons are created
     const tempDuration = 0;
     
-    const course = await prisma.courses.create({
+    try {
+      const course = await prisma.courses.create({
       data: {
         title: template.title,
         subtitle: template.subtitle,
@@ -130,7 +172,16 @@ export async function seedCourses(prisma: PrismaClient, categoryIds: number[], i
       }
     });
     
-    createdCourses.push(course);
+      createdCourses.push(course);
+    } catch (error) {
+      console.error(`Failed to create course "${template.title}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // If it's a unique constraint violation, continue with the next course
+      if (error instanceof Error && error.message.includes('Unique constraint')) {
+        console.log(`Skipping duplicate course: ${template.title}`);
+        continue;
+      }
+      throw error; // Re-throw other errors
+    }
   }
   
   console.log(`✅ Created ${createdCourses.length} courses`);

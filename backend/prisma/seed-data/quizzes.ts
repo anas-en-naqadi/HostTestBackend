@@ -1,8 +1,15 @@
 import { PrismaClient } from '@prisma/client';
 import { faker } from '@faker-js/faker';
 
+// Define the question type
+type QuizQuestion = {
+  text: string;
+  options: string[];
+  correctIndex: number;
+};
+
 // Domain-specific quiz topics and questions
-const quizTopics = {
+const quizTopics: Record<string, QuizQuestion[]> = {
   'web-development': [
     {
       text: 'What does HTML stand for?',
@@ -166,6 +173,9 @@ export async function seedQuizzes(prisma: PrismaClient, creatorIds: number[]) {
     } else if (title.toLowerCase().includes('design') || title.toLowerCase().includes('ui') || title.toLowerCase().includes('ux')) {
       topicKey = 'design';
     }
+    
+    // Type assertion to ensure topicKey is a valid key
+    // This is safe because we control the values topicKey can have
     
     // Create quiz with appropriate duration based on whether it's a final quiz
     const quiz = await prisma.quizzes.create({

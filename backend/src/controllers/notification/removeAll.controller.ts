@@ -3,6 +3,7 @@ import { removeAllReadNotifications } from '../../services/notification/removeAl
 import { successResponse, errorResponse } from '../../utils/api.utils';
 import { AppError } from '../../middleware/error.middleware';
 import { ApiResponse } from '../../types/notification.types';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const removeAllReadController = async (
   req: Request,
@@ -10,12 +11,20 @@ export const removeAllReadController = async (
 ): Promise<void> => {
   try {
     const userId = req.user!.id;
-   await removeAllReadNotifications(userId);
+    const count = await removeAllReadNotifications(userId);
+    
+    // Log activity
+    logActivity(
+      userId,
+      'NOTIFICATIONS_CLEARED',
+      `${req.user!.full_name} cleared ${count} read notifications`,
+      req.ip
+    ).catch(console.error);
     
     successResponse(
       res, 
       null,
-      `Successfully removed read notification`
+      `Successfully removed ${count} read notifications`
     );
   } catch (err) {
     if (err instanceof AppError) {

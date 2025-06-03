@@ -21,7 +21,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 
     // Send email
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'academe@gmail.com',
+      from: process.env.SMTP_FROM || 'forge@gmail.com',
       to: options.to,
       subject: options.subject,
       html: options.html

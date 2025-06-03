@@ -8,6 +8,7 @@ import { getCourseBySlug } from "../../services/course/listBySlug.service";
 import { saveThumbnail, saveIntroVideo, saveLessonVideo } from "../../utils/file.utils";
 import { MulterRequest } from "../../types/multer.types";
 import { lesson_content_type } from "../../types/course.types";
+import { logActivity } from "../../utils/activity_log.utils";
 
 // Controller for creating a course
 export const createCourseController = async (req: MulterRequest, res: Response) => {
@@ -322,6 +323,15 @@ export const createCourseController = async (req: MulterRequest, res: Response) 
 
     // Create the course using the validated data
     const newCourse = await createCourse(parsedBody as CreateCourseDto, userId);
+    
+    // Log the activity
+    logActivity(
+      userId,
+      'COURSE_CREATED',
+      `${req.user?.full_name} created a new course: ${newCourse.title}`,
+      req.ip
+    ).catch(console.error);
+    
     // Respond with the created course
     successResponse(res, newCourse);
   } catch (err) {

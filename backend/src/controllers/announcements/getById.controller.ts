@@ -2,6 +2,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { getAnnouncementById } from '../../services/announcements/getById.service';
 import { AppError } from '../../middleware/error.middleware';
+import { logActivity } from '../../utils/activity_log.utils';
 
 export const getAnnouncementByIdController = async (
   req: Request,
@@ -28,6 +29,14 @@ export const getAnnouncementByIdController = async (
     }
 
     const announcement = await getAnnouncementById(userId, id);
+    
+    logActivity(
+      userId,
+      'ANNOUNCEMENT_VIEWED',
+      `${req.user!.full_name} viewed announcement ID ${id}`,
+      req.ip
+    ).catch(console.error);
+    
     res.status(200).json({ 
       success: true,
       message: 'Announcement retrieved successfully',

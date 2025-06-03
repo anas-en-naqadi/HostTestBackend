@@ -5,6 +5,8 @@ import { AppError } from '../../middleware/error.middleware';
 import { UserResponse } from '../../types/user.types';
 import { CACHE_KEYS, clearCacheByPrefix } from '../../utils/cache.utils';
 import { ApiResponse } from '../../utils/api.utils';
+import { logActivity } from '../../utils/activity_log.utils';
+
 /**
  * Controller to create a new user
  * @param req Express request
@@ -18,6 +20,15 @@ export const createUserController = async (
   try {
     const newUser = await createUser(req.body);
     
+    // Log activity if admin user is creating this user
+    if (req.user) {
+      logActivity(
+        req.user.id,
+        'USER_CREATED',
+        `${req.user.full_name} created user: ${newUser.full_name} (${newUser.email})`,
+        req.ip
+      ).catch(console.error);
+    }
     
      successResponse(res, newUser, 'User created successfully', 201);
   } catch (error) {

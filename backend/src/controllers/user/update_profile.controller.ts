@@ -6,7 +6,8 @@ import { UserResponse } from '../../types/user.types';
 import { z } from 'zod';
 import { CACHE_KEYS, generateCacheKey, deleteFromCache, clearCacheByPrefix } from '../../utils/cache.utils';
 import { ApiResponse } from '../../utils/api.utils';
-
+import { logActivity } from '../../utils/activity_log.utils';
+import prisma from '../../config/prisma';
 
 /**
  * Controller to update a user's profile
@@ -26,10 +27,24 @@ export const updateProfileController = async (
        errorResponse(res, 'Invalid user ID', 400);
     }
 
+    // Get the current user's info for the activity log
+    const currentUser = req.user;
+    if (!currentUser) {
+      throw new AppError(401, 'User not authenticated');
+    }
     
-
     // Update user profile
     const updatedUser = await updateUserProfile(userId, req.body);
+    
+    // Log the activity
+    const activityMessage = `${currentUser.full_name} updated their own profile`;
+      
+    logActivity(
+      currentUser.id,
+      'PROFILE_UPDATED',
+      activityMessage,
+      req.ip
+    ).catch(console.error);
     
     // Invalidate caches
     try {

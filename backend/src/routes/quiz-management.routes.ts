@@ -3,7 +3,6 @@ import { Router, Response, NextFunction } from 'express';
 import { authenticate, hasRole, hasPermission } from '../middleware/auth.middleware';
 import { UserRole } from '../types/auth.types';
 import { createQuizController } from '../controllers/quiz-management/create.controller';
-import { validateAnswerController } from '../controllers/quiz-management/validateAnswer.controller';
 import { validateAnswersController } from '../controllers/quiz-management/validateAnswers.controller';
 import { updateQuizController } from '../controllers/quiz-management/update.controller';
 import { deleteQuizController, deleteQuestionController, deleteOptionController } from '../controllers/quiz-management/remove.controller';

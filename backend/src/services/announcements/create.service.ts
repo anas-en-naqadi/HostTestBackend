@@ -11,10 +11,10 @@ export const createAnnouncement = async (
 ): Promise<announcements> => {
   const course = await prisma.courses.findUnique({
     where: { id: data.courseId },
-    select: { user: true,slug:true,thumbnail_url:true,title:true },
+    select: { user: {select:{roles:true,full_name:true}},slug:true,thumbnail_url:true,title:true },
   });
-  if (!course || course.user?.id !== userId) {
-    throw new Error("Course not found or user is not the instructor");
+  if (!course || course.user.roles.name === "intern") {
+    throw new Error("Course not found or the user is an intern that can't create an annoucements");
   }
 
   const content = data.content || "";
