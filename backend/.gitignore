@@ -54,3 +54,6 @@ public/
 # Temporary files
 *.tmp
 *.bak
+
+#certificates
+certificates/
