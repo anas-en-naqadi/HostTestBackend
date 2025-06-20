@@ -10,6 +10,7 @@ import {
 import {
   CACHE_KEYS,
   deleteFromCache,
+  deletePatternFromCache,
   generateCacheKey,
 } from "../../utils/cache.utils";
 const prisma = new PrismaClient();
@@ -38,8 +39,8 @@ export const createCategory = async (
 
     await Promise.all(
       courses.map((course) =>
-        deleteFromCache(
-          generateCacheKey(CACHE_KEYS.COURSE, `learn-${course.slug}`)
+        deletePatternFromCache(
+          generateCacheKey(CACHE_KEYS.COURSE, `learn-${course.slug}-*`)
         )
       )
     );

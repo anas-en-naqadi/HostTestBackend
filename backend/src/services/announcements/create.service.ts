@@ -1,6 +1,6 @@
 import { PrismaClient, announcements } from "@prisma/client";
 import { sendNotification } from "../../utils/notification.utils";
-import { CACHE_KEYS, deleteFromCache, generateCacheKey } from "../../utils/cache.utils";
+import { CACHE_KEYS, deleteFromCache, deletePatternFromCache, generateCacheKey } from "../../utils/cache.utils";
 
 const prisma = new PrismaClient();
 
@@ -30,7 +30,7 @@ export const createAnnouncement = async (
     },
   });
 
- await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE,`learn-${course.slug}`));
+ await deletePatternFromCache(generateCacheKey(CACHE_KEYS.COURSE,`learn-${course.slug}-*`));
   await sendNotification(
     {
       title: "New Announcement",

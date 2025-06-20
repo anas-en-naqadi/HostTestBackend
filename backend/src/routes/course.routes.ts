@@ -4,14 +4,20 @@ import {
   getCourseBySlugController,
   removeCourseBySlugController,
   getCourseBySlugACController,
-  listCoursesByUserController
+  listCoursesByUserController,
+  changeCourseStatusController
 } from '../controllers/course';
 import { createCourseController } from '../controllers/course/create.controller';
+import { 
+  uploadThumbnailController, 
+  uploadIntroVideoController, 
+  uploadLessonVideoController 
+} from '../controllers/course/upload.controller';
 import { authenticate, hasRole, hasPermission } from '../middleware/auth.middleware';
 import { updateCourseController } from '../controllers/course/update.controller';
 import { UserRole } from '../types/user.types';
 import { validateSlug } from '../middleware/validator.middleware';
-import { upload } from '../middleware/upload.middleware';
+
 
 const router = Router();
 
@@ -22,7 +28,6 @@ router.use(authenticate);
 router.post('/',
   hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
   hasPermission('course:create'),
-  upload.any(), // Use any() to accept all fields including dynamic lesson_video_* fields
   createCourseController as RequestHandler
 );
 
@@ -30,7 +35,6 @@ router.put('/:slug',
   hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
   hasPermission('course:update'),
   validateSlug,
-  upload.any(), // Use any() to accept all fields including dynamic lesson_video_* fields
   updateCourseController as RequestHandler
 );
 
@@ -41,11 +45,36 @@ router.put('/:slug/json',
   updateCourseController as RequestHandler
 );
 
+router.patch('/change-status/:course_id',
+  hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
+  hasPermission('course:update'),
+  changeCourseStatusController
+);
+
 router.delete('/:slug',
   hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
   hasPermission('course:delete'),
   validateSlug,
   removeCourseBySlugController
+);
+
+// File Upload Routes
+router.post('/upload/thumbnail',
+  hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
+  hasPermission('course:update'),
+  uploadThumbnailController as RequestHandler
+);
+
+router.post('/upload/intro-video',
+  hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
+  hasPermission('course:update'),
+  uploadIntroVideoController as RequestHandler
+);
+
+router.post('/upload/lesson-video/:courseSlug',
+  hasRole([UserRole.INSTRUCTOR, UserRole.ADMIN]),
+  hasPermission('course:update'),
+  uploadLessonVideoController as RequestHandler
 );
 
 // Read operations - accessible by all roles including interns

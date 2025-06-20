@@ -17,6 +17,7 @@ declare global {
         full_name: string;
         role_id: number;
         role: string;
+        last_login: Date;
         status: user_status;
         permissions: string[];
       };
@@ -71,6 +72,7 @@ export const authenticate = async (
       username: user.username,
       full_name: user.full_name,
       role_id: user.role_id,
+      last_login: user.last_login!,
       role: user.roles.name,
       status: user.status,
       permissions

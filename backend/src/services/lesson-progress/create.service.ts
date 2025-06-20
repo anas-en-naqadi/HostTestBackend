@@ -21,7 +21,7 @@ export const createLessonProgress = async (
   });
   if (existingProgress) throw new Error('Progress already tracked for this lesson');
   
-  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}`);
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}-${userId}`);
   const cacheKeyE = `enrollments:${userId}:*`
 
   // Get course and modules information
@@ -129,7 +129,7 @@ if (keys.length > 0) {
   // Spread the array so each key is its own argument
   await redis.del(...keys);
 }
-ClearDashboardCache(userId);
+await ClearDashboardCache(userId);
 
   // Return the created progress record
   const createdProgress = await prisma.lesson_progress.findUnique({

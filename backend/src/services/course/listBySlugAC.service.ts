@@ -15,7 +15,7 @@ export const getCourseBySlugAC = async ({
   slug: string;
   userId: number;
 }): Promise<any> => {
-  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${slug}`);
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${slug}-${userId}`);
 
   // Check cache
   const cached = await getFromCache<CourseResponse>(cacheKey);

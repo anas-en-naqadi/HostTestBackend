@@ -4,6 +4,7 @@ import { CACHE_KEYS, deleteFromCache, generateCacheKey } from '../../utils/cache
 import redis from '../../config/redis';
 import { ClearDashboardCache } from '../../utils/clear_cache.utils';
 import { AppError } from '../../middleware/error.middleware';
+import { sendNotification } from '../../utils/notification.utils';
 
 const prisma = new PrismaClient();
 
@@ -36,6 +37,9 @@ export const resetUserCourseProgress = async (
       where: { slug: courseSlug },
       select: {
         id: true,
+        title:true,
+        slug:true,
+        thumbnail_url:true,
         modules: {
           select: {
             id: true,
@@ -143,8 +147,21 @@ export const resetUserCourseProgress = async (
       };
     });
 
+    await sendNotification({
+      title: "Course Progress Reset",
+      user_id: userId,
+      type: "COURSE_PROGRESS_RESET" as const,
+      content: `The user ${user.full_name} has failed to complete the course "${course.title}".`,
+      metadata: {
+        slug: course.slug,
+        thumbnail_url: course.thumbnail_url,
+      },
+    },userId).catch((error)=>{
+      console.log(error);
+    });
+
     // Clear relevant caches
-    const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${courseSlug}`);
+    const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${courseSlug}-${userId}`);
     const cacheKeyE = `enrollments:${userId}:*`;
     
     await deleteFromCache(cacheKey);
@@ -155,7 +172,7 @@ export const resetUserCourseProgress = async (
     }
     
     // Clear dashboard cache for the user
-    ClearDashboardCache(userId);
+    await ClearDashboardCache(userId);
 
     return result;
   } catch (error) {

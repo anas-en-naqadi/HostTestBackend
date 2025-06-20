@@ -4,7 +4,7 @@ import { AppError } from "../../middleware/error.middleware";
 import { clearCacheByPrefix, CACHE_KEYS, deleteFromCache, generateCacheKey, deletePatternFromCache } from "../../utils/cache.utils";
 
 // Remove a course by its ID  
-export const removeCourseBySlug = async (slug: string): Promise<void> => {
+export const removeCourseBySlug = async (slug: string, userId: number): Promise<void> => {
   // Check if the course exists first
   const course = await prisma.courses.findUnique({
     where: { slug },
@@ -24,8 +24,8 @@ export const removeCourseBySlug = async (slug: string): Promise<void> => {
     // Invalidate all related caches
     try {
       // Delete specific course caches
-      await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}`));
-      await deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `detail-${slug}`));
+      await deletePatternFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}-*`));
+      await deletePatternFromCache(generateCacheKey(CACHE_KEYS.COURSE, `detail-${slug}-*`));
       
       // Clear user-specific course list caches
       await deletePatternFromCache(`${CACHE_KEYS.COURSES}:user-*`);

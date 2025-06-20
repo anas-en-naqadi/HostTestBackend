@@ -17,7 +17,7 @@ export class PasswordResetController {
       logActivity(
         user!.id,
         'USER_REQUEST_PASSWORD_RESET_LINK',               // your activity code
-        `${user.full_name} with email ${email} requested password reset link`, 
+        `${user!.full_name} with email ${email} requested password reset link`, 
         req.ip
       ).catch(console.error);
       

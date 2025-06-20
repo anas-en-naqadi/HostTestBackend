@@ -112,7 +112,7 @@ export  async function getGradeDistribution(userId: number) {
 
 export async function getDashboardChartData(userId: number) {
 
-  const cacheKey = generateCacheKey("dashboard-states", userId);
+  const cacheKey = generateCacheKey("dashboard-states", String(userId));
 
   // Attempt to read from Redis cache
   const cached = await getFromCache(cacheKey);

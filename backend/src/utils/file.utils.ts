@@ -6,7 +6,7 @@ import { uploadConfig } from '../config/upload';
 // Get all directory paths from the upload configuration
 const UPLOADS_DIR = uploadConfig.getAbsolutePath();
 const THUMBNAILS_DIR = uploadConfig.getThumbnailPath();
-const VIDEOS_DIR = uploadConfig.getIntroVideoPath();
+const INTRO_VIDEOS_DIR = uploadConfig.getIntroVideoPath();
 const COURSE_VIDEOS_DIR = uploadConfig.getAbsolutePath(uploadConfig.courseVideosDir);
 
 // Ensure all required directories exist
@@ -24,9 +24,9 @@ const ensureAllDirectoriesExist = () => {
   }
 
   // Intro videos directory
-  if (!fs.existsSync(VIDEOS_DIR)) {
-    fs.mkdirSync(VIDEOS_DIR, { recursive: true });
-    console.log(`Created intro videos directory: ${VIDEOS_DIR}`);
+  if (!fs.existsSync(INTRO_VIDEOS_DIR)) {
+    fs.mkdirSync(INTRO_VIDEOS_DIR, { recursive: true });
+    console.log(`Created intro videos directory: ${INTRO_VIDEOS_DIR}`);
   }
 
   // Course videos directory
@@ -74,7 +74,7 @@ export const saveThumbnail = (file: Express.Multer.File): string => {
     const backendUrl = process.env.SERVER_URL;
     
     // Return the full URL for the thumbnail
-    return `${backendUrl}/${uploadConfig.uploadDir}/${uploadConfig.thumbnailsDir}/${secureFilename}`;
+    return `${backendUrl}/${uploadConfig.thumbnailsDir}/${secureFilename}`;
   } catch (error) {
     console.error(`Error saving thumbnail ${file.originalname}:`, error);
     throw new Error(`Failed to save thumbnail: ${(error as Error).message}`);
@@ -94,7 +94,7 @@ export const saveIntroVideo = (file: Express.Multer.File): string => {
   }
   
   const secureFilename = generateSecureFilename(file.originalname);
-  const destPath = path.join(VIDEOS_DIR, secureFilename);
+  const destPath = path.join(INTRO_VIDEOS_DIR, secureFilename);
   
   // Copy the file from temporary upload location to videos directory
   fs.copyFileSync(file.path, destPath);
@@ -106,7 +106,7 @@ export const saveIntroVideo = (file: Express.Multer.File): string => {
   const backendUrl = process.env.SERVER_URL;
   
   // Return the full URL for the video
-  return `${backendUrl}/${uploadConfig.uploadDir}/${uploadConfig.introVideosDir}/${secureFilename}`;
+  return `${backendUrl}/${uploadConfig.introVideosDir}/${secureFilename}`;
 };
 
 /**
@@ -140,7 +140,7 @@ export const getVideoPath = (videoUrl: string): string => {
     const filename = urlParts[urlParts.length - 1];
     
     // Return absolute path
-    return path.join(VIDEOS_DIR, filename);
+    return path.join(INTRO_VIDEOS_DIR, filename);
   } catch (error) {
     console.error(`Error getting video path for ${videoUrl}:`, error);
     return '';
@@ -310,7 +310,7 @@ export const saveLessonVideo = (file: Express.Multer.File, courseSlug: string): 
     const backendUrl = process.env.SERVER_URL;
     
     // Return the full URL for the video
-    return `${backendUrl}/${uploadConfig.uploadDir}/${uploadConfig.courseVideosDir}/${courseSlug}/${secureFilename}`;
+    return `${backendUrl}/${uploadConfig.courseVideosDir}/${courseSlug}/${secureFilename}`;
   } catch (error) {
     console.error(`Error saving lesson video ${file.originalname}:`, error);
     throw new Error(`Failed to save lesson video: ${(error as Error).message}`);

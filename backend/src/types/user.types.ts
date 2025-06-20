@@ -21,10 +21,10 @@ export interface UserResponse {
   instructor?: Object | null;
   status: user_status;
   last_login: Date | null;
-  created_at: Date | null;
-  updated_at: Date | null;
+  created_at?: Date | null;
+  updated_at?: Date | null;
   instructors?: object;
-  
+  email_verified?: boolean;
 }
 
 export interface UserBody {

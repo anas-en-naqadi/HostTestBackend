@@ -60,9 +60,9 @@ export const createQuizAttempt = async (
   });
 
   // Clear relevant caches
-  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}`);
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}-${userId}`);
   await deleteFromCache(cacheKey);
-  ClearDashboardCache(userId);
+  await ClearDashboardCache(userId);
   
   return attempt;
 };

@@ -9,7 +9,8 @@ export interface AuthRequest extends Request {
     full_name: string;
     role_id: number;
     role: string;
-    status: user_status; // Use Prisma's user_status enum
+    status: user_status;
     permissions: string[];
+    last_login: Date; // ✅ Ajoute ceci pour matcher avec ce qui est attendu
   };
 }

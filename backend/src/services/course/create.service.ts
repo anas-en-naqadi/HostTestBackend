@@ -49,7 +49,7 @@ async function createModulesInBatches(
   courseId: number,
   batchSize: number = 5
 ) {
-  const createdModules = [];
+  let totalModulesDuration = 0;
   
   for (let i = 0; i < modules.length; i += batchSize) {
     const batch = modules.slice(i, i + batchSize);
@@ -57,11 +57,11 @@ async function createModulesInBatches(
     
     for (const module of batch) {
       const createdModule = await createSingleModule(tx, module, courseId);
-      createdModules.push(createdModule);
+      totalModulesDuration += createdModule.duration; // Sum up durations
     }
   }
   
-  return createdModules;
+  return totalModulesDuration;
 }
 
 // Helper function to create a single module with its lessons
@@ -234,16 +234,7 @@ export const createCourse = async (courseData: CreateCourseDto, userId: number) 
       throw new AppError(400, "Course with this slug already exists.");
     }
 
-    // Calculate total duration
-    const totalDuration = modules.reduce(
-      (total, module) => {
-        if (!module.lessons || module.lessons.length === 0) return total;
-        return total + module.lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
-      },
-      0
-    );
-
-    console.log(`Creating course with ${modules.length} modules and total duration: ${totalDuration} minutes`);
+    console.log(`Creating course with ${modules.length} modules`);
 
     // Use the retry mechanism for transaction
     const createdCourse = await retryTransaction(async (tx) => {
@@ -251,7 +242,7 @@ export const createCourse = async (courseData: CreateCourseDto, userId: number) 
       const newCourse = await tx.courses.create({
         data: {
           ...courseDetails,
-          total_duration: totalDuration * 60, // Convert to seconds
+          total_duration: 0, // Initialize total_duration to 0
           // Provide default values for required fields if they're missing
           thumbnail_url: courseDetails.thumbnail_url || '',
           intro_video_url: courseDetails.intro_video_url || '',
@@ -262,7 +253,13 @@ export const createCourse = async (courseData: CreateCourseDto, userId: number) 
 
       // Create modules and their lessons in batches to prevent timeouts
       if (modules && modules.length > 0) {
-        await createModulesInBatches(tx, modules, newCourse.id);
+        const totalModulesDuration = await createModulesInBatches(tx, modules, newCourse.id);
+        // Update the course with the calculated total duration
+        await tx.courses.update({
+          where: { id: newCourse.id },
+          data: { total_duration: totalModulesDuration },
+        });
+        newCourse.total_duration = totalModulesDuration; // Update the newCourse object as well
       }
 
       console.log(`All modules and lessons created successfully for course: ${newCourse.title}`);
@@ -275,7 +272,7 @@ export const createCourse = async (courseData: CreateCourseDto, userId: number) 
       title: createdCourse.title,
       slug: createdCourse.slug,
       modules_count: modules.length,
-      total_duration: totalDuration
+      total_duration: createdCourse.total_duration
     });
     
     // Invalidate all related caches

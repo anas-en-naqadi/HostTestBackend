@@ -9,6 +9,7 @@ export const uploadConfig = {
   introVideosDir: process.env.UPLOAD_DIR_INTRO_VIDEOS || 'intro_videos',
   courseVideosDir: process.env.UPLOAD_DIR_COURSE_VIDEOS || 'course_videos',
   thumbnailsDir: process.env.UPLOAD_DIR_THUMBNAILS || 'thumbnails',
+  tempDir: process.env.UPLOAD_DIR_TEMP || 'temp',
   
   // File size limits (in MB, converted to bytes in the getter)
   get thumbnailMaxSize(): number {

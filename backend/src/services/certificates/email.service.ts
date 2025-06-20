@@ -313,7 +313,7 @@ export class CertificateEmailService {
         certificateCode: certificate.certificate_code,
         downloadUrl,
         completionDate,
-        platformName: "Forge",
+        platformName: process.env.PLATFORM_NAME || "Forge",
         supportEmail: process.env.SUPPORT_EMAIL || "support@forge.com",
         currentYear: new Date().getFullYear(),
       };

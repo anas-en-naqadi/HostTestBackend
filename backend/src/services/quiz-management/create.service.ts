@@ -85,7 +85,7 @@ export const createQuizWithDetails = async (
     await deleteFromCache(
       generateCacheKey(
         CACHE_KEYS.COURSE,
-        `learn-${lesson?.modules.courses?.slug}`
+        `learn-${lesson?.modules.courses?.slug}-${userId}`
       )
     );
     return newQuiz;

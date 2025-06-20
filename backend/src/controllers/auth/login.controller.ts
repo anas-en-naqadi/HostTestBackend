@@ -17,7 +17,6 @@ export class LoginController {
 
       // Generate refresh token
       const refreshToken = result.refreshToken; // Assuming you are getting this from the login service
-console.log("refresh",refreshToken);
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -32,7 +31,6 @@ console.log("refresh",refreshToken);
         `${result.user.full_name} successfully logged in `,
         req.ip
       ).catch(console.error);
-
       res.status(200).json({
         token: result.token,
         user: result.user

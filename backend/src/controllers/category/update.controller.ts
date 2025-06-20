@@ -11,14 +11,17 @@ export const updateCategoryController = async (
 ): Promise<void> => {
   try {
     const slug = req.params.slug;
-  
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(401, "User not authenticated");
+    }
     const { name } = req.body;
-    const updated = await updateCategory(slug, { name });
+    const updated = await updateCategory(slug, { name }, userId);
 
     const user = req.user;
 
     logActivity(
-      user!.id,
+      userId,
       'CATEGORY_UPDATED',
       `${user!.full_name} updated category "${updated.name}" (ID: ${updated.id})`,
       req.ip

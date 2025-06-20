@@ -2,12 +2,12 @@
 import { Prisma } from "@prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import prisma from "../../config/prisma";
-import { CACHE_KEYS, deleteFromCache, generateCacheKey } from "../../utils/cache.utils";
+import { CACHE_KEYS, deleteFromCache, deletePatternFromCache, generateCacheKey } from "../../utils/cache.utils";
 
 /**
  * Delete a category
  */
-export const removeCategory = async (slug: string): Promise<void> => {
+export const removeCategory = async (slug: string, userId: number): Promise<void> => {
   try {
     await prisma.categories.delete({
       where: { slug: slug },
@@ -26,7 +26,7 @@ export const removeCategory = async (slug: string): Promise<void> => {
     // Delete cache for each related course
     await Promise.all(
       courses.map(course => 
-        deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${course.slug}`))
+        deletePatternFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${course.slug}-*`))
       )
     );
   } catch (err) {

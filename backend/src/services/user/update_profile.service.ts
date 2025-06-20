@@ -91,8 +91,7 @@ export const updateUserProfile = async (id: number, data: {
       role_id: true,
       status: true,
       last_login: true,
-      created_at: true,
-      updated_at: true,
+      email_verified: true,
       roles: {
         select: {
           name: true
@@ -111,8 +110,7 @@ export const updateUserProfile = async (id: number, data: {
     role: updatedUser.roles?.name || 'unknown',
     status: updatedUser.status,
     last_login: updatedUser.last_login,
-    created_at: updatedUser.created_at,
-    updated_at: updatedUser.updated_at
+    email_verified: updatedUser.email_verified,
   };
 
   return userResponse;

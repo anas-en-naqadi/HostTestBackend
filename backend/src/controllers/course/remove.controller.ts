@@ -26,7 +26,7 @@ export const removeCourseBySlugController = async (req: Request, res: Response) 
     }
     
     // Call service to remove course
-    await removeCourseBySlug(slug);
+    await removeCourseBySlug(slug, userId);
     
     // Log the activity
     logActivity(

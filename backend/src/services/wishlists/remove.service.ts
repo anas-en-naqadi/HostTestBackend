@@ -41,11 +41,11 @@ export const deleteWishlist = async (
     if (!main_course) throw new Error("Course not found");
 
     await deleteFromCache(
-      generateCacheKey(CACHE_KEYS.COURSE, `detail-${main_course.slug}`)
+      generateCacheKey(CACHE_KEYS.COURSE, `detail-${main_course.slug}-${userId}`)
     );
   }
   const pattern = `wishlists:${userId}:*`;
-  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${course.slug}`);
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${course.slug}-${userId}`);
   await deleteFromCache(cacheKey);
   const keys = await redis.keys(pattern);
 
@@ -53,5 +53,5 @@ export const deleteWishlist = async (
     await redis.del(...keys);
   }
 
-  ClearDashboardCache(userId);
+  await ClearDashboardCache(userId);
 };

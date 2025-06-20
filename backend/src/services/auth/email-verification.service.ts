@@ -62,7 +62,7 @@ export class EmailVerificationService {
       const templateData: EmailTemplateData = {
         userName: user.full_name,
         verificationUrl,
-        platformName: "Forge",
+        platformName: process.env.PLATFORM_NAME || "Forge",
         supportEmail: process.env.SUPPORT_EMAIL || "support@forge.com",
         currentYear: new Date().getFullYear(),
       };
@@ -73,7 +73,7 @@ export class EmailVerificationService {
       // Send email
       await sendEmail({
         to: user.email,
-        subject: "Verify Your Email Address - Forge",
+        subject: `Verify Your Email Address - ${templateData.platformName}`,
         html: htmlContent,
       });
     } catch (error) {
@@ -177,7 +177,7 @@ export class EmailVerificationService {
       const templateData: EmailTemplateData = {
         userName: user.full_name,
         verificationUrl,
-        platformName: "Forge",
+        platformName: process.env.PLATFORM_NAME || "Forge",
         supportEmail: process.env.SUPPORT_EMAIL || "support@forge.com",
         currentYear: new Date().getFullYear(),
       };
@@ -188,7 +188,7 @@ export class EmailVerificationService {
       // Send email
       await sendEmail({
         to: user.email,
-        subject: "Verify Your Email Address - Forge",
+        subject: `Verify Your Email Address - ${templateData.platformName}`,
         html: htmlContent,
       });
       return user;
@@ -251,7 +251,7 @@ export class EmailVerificationService {
         userName: user.full_name,
         verificationUrl,
         tempPassword,
-        platformName: "Forge",
+        platformName: process.env.PLATFORM_NAME || "Forge",
         supportEmail: process.env.SUPPORT_EMAIL || "support@forge.com",
         currentYear: new Date().getFullYear(),
       };
@@ -262,8 +262,7 @@ export class EmailVerificationService {
       // Send email
       await sendEmail({
         to: user.email,
-        subject:
-          "Welcome to Forge - Verify Your Email and Access Your Account",
+        subject: `Welcome to ${templateData.platformName} - Verify Your Email and Access Your Account`,
         html: htmlContent,
       });
     } catch (error) {
@@ -271,10 +270,7 @@ export class EmailVerificationService {
       if (error instanceof AppError) {
         throw error;
       }
-      throw new AppError(
-        500,
-        "Failed to send verification email with password"
-      );
+      throw new AppError(500, "Failed to send verification email with password");
     }
   }
 

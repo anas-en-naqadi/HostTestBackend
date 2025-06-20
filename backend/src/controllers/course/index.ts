@@ -5,6 +5,7 @@ import { createCourseController } from './create.controller';
 import { updateCourseController } from './update.controller';
 import { getCourseBySlugACController } from './getBySlugAC.controller';
 import { listCoursesByUserController } from './listByUser.controller';
+import { changeCourseStatusController } from './changeStatus.controller';
 
 export { 
   listCoursesController,
@@ -13,7 +14,8 @@ export {
   createCourseController,
   updateCourseController,
   getCourseBySlugACController,
-  listCoursesByUserController
+  listCoursesByUserController,
+  changeCourseStatusController
 };
 
 

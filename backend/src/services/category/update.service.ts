@@ -7,7 +7,7 @@ import {
   UpdateCategoryDto,
   CategoryResponse,
 } from "../../types/category.types";
-import { CACHE_KEYS, deleteFromCache, generateCacheKey } from "../../utils/cache.utils";
+import { CACHE_KEYS, deleteFromCache, deletePatternFromCache, generateCacheKey } from "../../utils/cache.utils";
 
 const prisma = new PrismaClient();
 
@@ -16,7 +16,8 @@ const prisma = new PrismaClient();
  */
 export const updateCategory = async (
   slug: string,
-  dto: UpdateCategoryDto
+  dto: UpdateCategoryDto,
+  userId: number
 ): Promise<CategoryResponse> => {
   const data: Record<string, any> = {};
   if (dto.name) {
@@ -40,7 +41,7 @@ export const updateCategory = async (
     // Delete cache for each related course
     await Promise.all(
       courses.map(course => 
-        deleteFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${course.slug}`))
+        deletePatternFromCache(generateCacheKey(CACHE_KEYS.COURSE, `learn-${course.slug}-*`))
       )
     );
 

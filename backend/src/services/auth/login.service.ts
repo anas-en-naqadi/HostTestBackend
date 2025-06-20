@@ -117,9 +117,12 @@ export class LoginService {
 
       // Update last login timestamp
       console.log('Updating last login timestamp');
-      await prisma.users.update({
+     const updatedUser = await prisma.users.update({
         where: { id: user.id },
-        data: { last_login: new Date(),is_online:true }
+        data: { last_login: new Date(),is_online:true },
+        include: {
+          roles: true, // Include roles to have access to the role name
+        },
       });
 
       console.log('Login successful for user:', user.email);
@@ -128,14 +131,14 @@ export class LoginService {
       // Return user data and tokens
       return {
         user: {
-          id: user.id,
-          full_name: user.full_name,
-          username: user.username,
-          email: user.email,
-          role: user.roles.name,
-          status: user.status,
-          email_verified: user.email_verified,
-          last_login: user.last_login || undefined,
+          id: updatedUser.id,
+          full_name: updatedUser.full_name,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          role: updatedUser.roles.name,
+          status: updatedUser.status,
+          email_verified: updatedUser.email_verified,
+          last_login: updatedUser.last_login || undefined,
         },
         token,
         refreshToken

@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { lesson_content_type } from "../types/course.types";
 
 // Enums
-const lessonContentTypeEnum = z.enum(["text", "video", "quiz"], { required_error: "Lesson content type is required" });
+const lessonContentTypeEnum = z.nativeEnum(lesson_content_type, { required_error: "Lesson content type is required" });
 const courseDifficultyEnum = z.enum(["beginner", "intermediate", "advanced", "allLevel"], { required_error: "Course difficulty is required" });
 
 // Function to validate URLs accepted by react-plyr / Plyr
@@ -53,13 +54,13 @@ export const lessonSchema = z.object({
     { message: "Video URL must be a valid YouTube URL or video file URL (.mp4, .webm, .ogg, .mov, .mkv)" }
   ),
   lesson_text: z.string().optional(),
-  quiz_id: z.number().int().positive().nullable().optional(),
+  quiz_id: z.number().int().positive().optional(),
   duration: z.number({ required_error: "Lesson duration is required" }).int().nonnegative("Duration must be zero or more"),
   order_position: z.number({ required_error: "Lesson Order position is required" }).int().nonnegative("Order position must be zero or more"),
   is_final_quiz: z.boolean().optional(), // Flag to mark a quiz as the final quiz
 }).superRefine((data, ctx) => {
   switch (data.content_type) {
-    case "video":
+    case lesson_content_type.VIDEO:
       if (!data.video_url && data.video_url !== "") {
         ctx.addIssue({
           path: ["video_url"],
@@ -68,7 +69,7 @@ export const lessonSchema = z.object({
         });
       }
       break;
-    case "text":
+    case lesson_content_type.TEXT:
       if (!data.lesson_text) {
         ctx.addIssue({
           path: ["lesson_text"],
@@ -77,7 +78,7 @@ export const lessonSchema = z.object({
         });
       }
       break;
-    case "quiz":
+    case lesson_content_type.QUIZ:
       if (!data.quiz_id) {
         ctx.addIssue({
           path: ["quiz_id"],
@@ -147,7 +148,7 @@ export const createCourseSchema = baseCourseSchema.superRefine((data, ctx) => {
   
   // Check if the last module's only lesson is a quiz
   const lastLesson = lastModule.lessons[0];
-  if (lastLesson.content_type !== "quiz") {
+  if (lastLesson.content_type !== lesson_content_type.QUIZ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "The last module must contain a quiz lesson",
@@ -173,7 +174,7 @@ export const createCourseSchema = baseCourseSchema.superRefine((data, ctx) => {
       if (moduleIndex === data.modules.length - 1 && lessonIndex === 0) {
         return false;
       }
-      return lesson.content_type === "quiz" && lesson.is_final_quiz === true;
+      return lesson.content_type === lesson_content_type.QUIZ && lesson.is_final_quiz === true;
     }).length;
   }, 0);
   

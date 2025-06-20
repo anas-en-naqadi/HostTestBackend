@@ -194,7 +194,7 @@ const clearEnrollmentCaches = async (userId: number, courseSlug: string): Promis
   try {
     // Clear course detail cache
     await deleteFromCache(
-      generateCacheKey(CACHE_KEYS.COURSE, `detail-${courseSlug}`)
+      generateCacheKey(CACHE_KEYS.COURSE, `detail-${courseSlug}-${userId}`)
     );
     await deleteFromCache(getCertificatesCacheKey(userId));
 

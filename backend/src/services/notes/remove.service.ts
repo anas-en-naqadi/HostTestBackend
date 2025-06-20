@@ -8,7 +8,7 @@ export const deleteNote = async (userId: number, id: number): Promise<void> => {
   if (!note || note.user_id !== userId) {
     throw new AppError(404,'Note not found or unauthorized');
   }
-  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${note.lessons.modules.courses.slug}`);
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${note.lessons.modules.courses.slug}-${userId}`);
   await deleteFromCache(cacheKey);
   await prisma.notes.delete({ where: { id } });
 };

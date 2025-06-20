@@ -221,7 +221,7 @@ export const updateQuizWithDetails = async (
   await deleteFromCache(
     generateCacheKey(
       CACHE_KEYS.COURSE,
-      `learn-${lesson?.modules.courses?.slug}`
+      `learn-${lesson?.modules.courses?.slug}-${userId}`
     )
   );
 

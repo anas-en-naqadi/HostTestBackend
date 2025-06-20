@@ -40,12 +40,12 @@ export const createWishlist = async (
     if (!main_course) throw new Error("Course not found");
 
     await deleteFromCache(
-      generateCacheKey(CACHE_KEYS.COURSE, `detail-${main_course.slug}`)
+      generateCacheKey(CACHE_KEYS.COURSE, `detail-${main_course.slug}-${userId}`)
     );
   }
 
-  ClearDashboardCache(userId);
-  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${course.slug}`);
+  await ClearDashboardCache(userId);
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `detail-${course.slug}-${userId}`);
   await deleteFromCache(cacheKey);
   const keys = await redis.keys(getWishlistsCachePattern(userId));
   if (keys.length > 0) {

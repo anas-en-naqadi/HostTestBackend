@@ -11,13 +11,17 @@ export const removeCategoryController = async (
 ): Promise<void> => {
   try {
     const slug = req.params.slug;
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new AppError(401, "User not authenticated");
+    }
 
-    const deleted = await removeCategory(slug);
+    const deleted = await removeCategory(slug, userId);
 
     const user = req.user;
 
     logActivity(
-      user!.id, 
+      userId, 
       "CATEGORY_DELETED",
       `${user!.full_name} deleted category slug ${slug})`,
       req.ip

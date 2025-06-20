@@ -9,7 +9,7 @@ import {
 } from "../../utils/cache.utils";
 
 export const getCourseBySlug = async (slug: string, userId: number): Promise<any> => {
-  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}`);
+  const cacheKey = generateCacheKey(CACHE_KEYS.COURSE, `learn-${slug}-${userId}`);
 
   // Check cache
   const cached = await getFromCache<CourseResponse>(cacheKey);
@@ -106,6 +106,7 @@ export const getCourseBySlug = async (slug: string, userId: number): Promise<any
                 select: {
                   id: true,
                   lesson_id:true,
+                  created_at:true,
                   content: true,
                   noted_at: true,
                 },
@@ -162,7 +163,14 @@ export const getCourseBySlug = async (slug: string, userId: number): Promise<any
   }
   const notes = course.modules.flatMap(module =>
 
-    module.lessons.flatMap(lesson => lesson.notes)
+    module.lessons.flatMap(lesson =>   lesson.notes.map(note => ({
+      ...note,
+      lesson_type: lesson.content_type,
+      module_order_position:module.order_position,
+      lesson_order_position:lesson.order_position,
+      module_title:module.title,
+      lesson_title:lesson.title,
+    })))
 
   );
 

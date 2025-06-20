@@ -456,7 +456,7 @@ export const verifyCertificateController = async (
       course: {
         title: certificate.enrollments.courses.title,
       },
-      organization: 'Forge Learning Platform'
+      organization: `${process.env.PLATFORM_NAME || 'Forge'} Learning Platform`,
     };
 
     res.status(200).json({
